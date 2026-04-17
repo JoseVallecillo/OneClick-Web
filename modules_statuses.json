@@ -15,5 +15,7 @@
     "Accounting": true,
     "Rentals": true,
     "Hospitality": true,
-    "RealEstate": true
+    "RealEstate": true,
+    "Cooperativas": true,
+    "Microfinance": true
 }
