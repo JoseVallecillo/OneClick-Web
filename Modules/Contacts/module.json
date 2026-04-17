@@ -1,0 +1,11 @@
+{
+    "name": "Contacts",
+    "alias": "contacts",
+    "description": "Master data for clients, suppliers and employees — the foundation for all transactional modules.",
+    "keywords": ["contacts", "clients", "suppliers", "employees", "master-data"],
+    "priority": 20,
+    "providers": [
+        "Modules\\Contacts\\Providers\\ContactsServiceProvider"
+    ],
+    "files": []
+}

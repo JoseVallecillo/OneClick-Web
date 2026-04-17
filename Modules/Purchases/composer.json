@@ -1,0 +1,16 @@
+{
+    "name": "modules/purchases",
+    "description": "Purchases module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Purchases\\": "app/",
+            "Modules\\Purchases\\Database\\Factories\\": "database/factories/",
+            "Modules\\Purchases\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Purchases\\Tests\\": "tests/"
+        }
+    }
+}

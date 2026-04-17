@@ -1,0 +1,11 @@
+{
+    "name": "Purchases",
+    "alias": "purchases",
+    "description": "Módulo de compras — órdenes de compra con flujo de trabajo: borrador, confirmado, recibido y facturado.",
+    "keywords": ["purchases", "compras", "purchase orders", "proveedores", "suppliers"],
+    "priority": 30,
+    "providers": [
+        "Modules\\Purchases\\Providers\\PurchasesServiceProvider"
+    ],
+    "files": []
+}

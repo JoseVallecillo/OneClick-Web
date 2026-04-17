@@ -1,0 +1,16 @@
+{
+    "name": "modules/accounting",
+    "description": "Accounting module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Accounting\\": "app/",
+            "Modules\\Accounting\\Database\\Factories\\": "database/factories/",
+            "Modules\\Accounting\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Accounting\\Tests\\": "tests/"
+        }
+    }
+}

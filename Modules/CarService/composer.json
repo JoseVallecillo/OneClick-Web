@@ -1,0 +1,16 @@
+{
+    "name": "modules/car-service",
+    "description": "Car Service / Lubricentro module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\CarService\\": "app/",
+            "Modules\\CarService\\Database\\Factories\\": "database/factories/",
+            "Modules\\CarService\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\CarService\\Tests\\": "tests/"
+        }
+    }
+}

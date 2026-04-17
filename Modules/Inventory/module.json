@@ -1,0 +1,11 @@
+{
+    "name": "Inventory",
+    "alias": "inventory",
+    "description": "Inventory management — products, warehouses, stock movements, lots and serial numbers.",
+    "keywords": ["inventory", "products", "stock", "warehouse", "lots", "serials"],
+    "priority": 25,
+    "providers": [
+        "Modules\\Inventory\\Providers\\InventoryServiceProvider"
+    ],
+    "files": []
+}

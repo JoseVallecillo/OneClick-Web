@@ -1,0 +1,16 @@
+{
+    "name": "modules/subscriptions",
+    "description": "Subscriptions module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Subscriptions\\": "app/",
+            "Modules\\Subscriptions\\Database\\Factories\\": "database/factories/",
+            "Modules\\Subscriptions\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Subscriptions\\Tests\\": "tests/"
+        }
+    }
+}

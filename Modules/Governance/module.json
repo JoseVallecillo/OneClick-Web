@@ -1,0 +1,11 @@
+{
+    "name": "Governance",
+    "alias": "governance",
+    "description": "Dynamic UI governance — control buttons and fields across modules based on user roles without modifying source code.",
+    "keywords": ["governance", "security", "ui", "roles"],
+    "priority": 10,
+    "providers": [
+        "Modules\\Governance\\Providers\\GovernanceServiceProvider"
+    ],
+    "files": []
+}

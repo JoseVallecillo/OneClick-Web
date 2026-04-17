@@ -1,0 +1,11 @@
+{
+    "name": "Pos",
+    "alias": "pos",
+    "description": "Módulo de punto de venta B2C — sesiones de caja, ventas rápidas con múltiples métodos de pago y gestión de efectivo.",
+    "keywords": ["pos", "punto de venta", "caja", "retail", "b2c", "ventas"],
+    "priority": 40,
+    "providers": [
+        "Modules\\Pos\\Providers\\PosServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Subscriptions",
+    "alias": "subscriptions",
+    "description": "License and subscription management — plans, activation tokens, and user-limit enforcement.",
+    "keywords": ["subscriptions", "license", "plans", "billing"],
+    "priority": 3,
+    "providers": [
+        "Modules\\Subscriptions\\Providers\\SubscriptionsServiceProvider"
+    ],
+    "files": []
+}

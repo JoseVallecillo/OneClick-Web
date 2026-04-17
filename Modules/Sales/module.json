@@ -1,0 +1,11 @@
+{
+    "name": "Sales",
+    "alias": "sales",
+    "description": "Módulo de ventas — cotizaciones y órdenes de venta con flujo de trabajo: cotización, confirmada, despachada y facturada.",
+    "keywords": ["sales", "ventas", "sales orders", "clientes", "customers", "cotizaciones", "quotes"],
+    "priority": 35,
+    "providers": [
+        "Modules\\Sales\\Providers\\SalesServiceProvider"
+    ],
+    "files": []
+}

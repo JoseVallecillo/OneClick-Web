@@ -1,0 +1,16 @@
+{
+    "AppStore": true,
+    "CarService": true,
+    "Contacts": true,
+    "Governance": true,
+    "Inventory": true,
+    "Pos": true,
+    "Purchases": true,
+    "Sales": true,
+    "Settings": true,
+    "Users": true,
+    "Subscriptions": true,
+    "Accounting": true,
+    "Rentals": true,
+    "Hospitality": true
+}

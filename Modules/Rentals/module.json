@@ -1,0 +1,11 @@
+{
+    "name": "Rentals",
+    "alias": "rentals",
+    "description": "Módulo de alquileres — reservas, tarifas flexibles, depósitos de garantía, checklists de entrega/devolución, mantenimiento preventivo por uso y reportes de rentabilidad por activo.",
+    "keywords": ["alquiler", "renta", "reserva", "equipo", "inventario", "depósito", "checklist"],
+    "priority": 50,
+    "providers": [
+        "Modules\\Rentals\\Providers\\RentalsServiceProvider"
+    ],
+    "files": []
+}

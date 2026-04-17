@@ -1,0 +1,16 @@
+{
+    "name": "modules/governance",
+    "description": "Dynamic UI Governance module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Governance\\": "app/",
+            "Modules\\Governance\\Database\\Factories\\": "database/factories/",
+            "Modules\\Governance\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Governance\\Tests\\": "tests/"
+        }
+    }
+}

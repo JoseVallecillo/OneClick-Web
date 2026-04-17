@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/appstore",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AppStore\\": "app/",
+            "Modules\\AppStore\\Database\\Factories\\": "database/factories/",
+            "Modules\\AppStore\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AppStore\\Tests\\": "tests/"
+        }
+    }
+}
