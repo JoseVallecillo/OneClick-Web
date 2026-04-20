@@ -1,0 +1,11 @@
+{
+    "name": "RealEstate",
+    "alias": "realestate",
+    "description": "Módulo inmobiliario — inventario de propiedades, CRM de leads, proceso de venta/arrendamiento, planes de pago, comisiones y administración post-venta.",
+    "keywords": ["inmobiliaria", "propiedades", "leads", "venta", "arrendamiento", "comisiones", "condominio"],
+    "priority": 60,
+    "providers": [
+        "Modules\\RealEstate\\Providers\\RealEstateServiceProvider"
+    ],
+    "files": []
+}

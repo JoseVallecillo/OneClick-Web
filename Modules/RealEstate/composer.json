@@ -1,0 +1,16 @@
+{
+    "name": "modules/realestate",
+    "description": "RealEstate module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\RealEstate\\": "app/",
+            "Modules\\RealEstate\\Database\\Factories\\": "database/factories/",
+            "Modules\\RealEstate\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\RealEstate\\Tests\\": "tests/"
+        }
+    }
+}

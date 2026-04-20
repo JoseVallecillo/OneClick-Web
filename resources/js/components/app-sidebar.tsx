@@ -16,6 +16,7 @@ import { Link } from '@inertiajs/react';
 import {
     Bed,
     BookUser,
+    Building2,
     Calculator,
     Car,
     CircleDollarSign,
@@ -144,6 +145,20 @@ const mainNavItems: NavItem[] = [
             { title: 'Impuestos',          href: '/accounting/taxes' },
             { title: 'Reportes',           href: '/accounting/reports/trial-balance' },
             { title: 'Configuración CAI',   href: '/accounting/cai' },
+        ],
+    },
+    {
+        title: 'Inmobiliaria',
+        href: '/realestate/properties',
+        icon: Building2,
+        items: [
+            { title: 'Propiedades',       href: '/realestate/properties' },
+            { title: 'Leads',             href: '/realestate/leads' },
+            { title: 'Negocios',          href: '/realestate/deals' },
+            { title: 'Planes de Pago',    href: '/realestate/payment-plans' },
+            { title: 'Comisiones',        href: '/realestate/commissions' },
+            { title: 'Soporte',           href: '/realestate/support' },
+            { title: 'Cuotas de Mant.',   href: '/realestate/condo-fees' },
         ],
     },
     {
