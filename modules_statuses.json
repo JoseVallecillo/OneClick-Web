@@ -1,5 +1,6 @@
 {
     "AppStore": true,
+    "AutoLote": true,
     "CarService": true,
     "Contacts": true,
     "Governance": true,

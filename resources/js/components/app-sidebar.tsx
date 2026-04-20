@@ -19,6 +19,7 @@ import {
     Calculator,
     Car,
     CircleDollarSign,
+    Gauge,
     Key,
     LayoutGrid,
     Monitor,
@@ -68,6 +69,15 @@ const mainNavItems: NavItem[] = [
                 title: 'Configuración',
                 href: '/inventory/config',
             },
+        ],
+    },
+    {
+        title: 'Autolote',
+        href: '/autolote/vehicles',
+        icon: Gauge,
+        items: [
+            { title: 'Inventario',          href: '/autolote/vehicles' },
+            { title: 'Registrar Vehículo',  href: '/autolote/vehicles/create' },
         ],
     },
     {
