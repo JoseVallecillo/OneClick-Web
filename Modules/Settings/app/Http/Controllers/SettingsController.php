@@ -13,10 +13,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Settings\Models\Branch;
 use Modules\Settings\Models\Company;
-use Modules\Settings\Models\Currency;
 use Modules\Settings\Models\Setting;
-use Modules\Settings\Models\TaxRate;
-
 class SettingsController extends Controller
 {
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -30,14 +27,9 @@ class SettingsController extends Controller
 
         $users = User::orderBy('name')->get(['id', 'name', 'email']);
 
-        $currencies = Currency::orderBy('is_primary', 'desc')->orderBy('code')->get();
-        $taxRates   = TaxRate::orderBy('rate')->orderBy('name')->get();
-
         return Inertia::render('Settings::Index', [
             'company'        => $company,
             'users'          => $users,
-            'currencies'     => $currencies,
-            'tax_rates'      => $taxRates,
             'operation'      => [],
             'smtp'           => [
                 'host'         => Setting::get('smtp_host', ''),
@@ -192,126 +184,6 @@ class SettingsController extends Controller
         $this->requireSubscription();
 
         return back()->with('success', 'Parámetros guardados.');
-    }
-
-    // ── Tax rates ─────────────────────────────────────────────────────────────
-
-    public function storeTaxRate(Request $request): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        $validated = $request->validate([
-            'name'       => 'required|string|max:100',
-            'rate'       => 'required|numeric|min:0|max:100',
-            'is_default' => 'boolean',
-            'active'     => 'boolean',
-        ]);
-
-        $taxRate = TaxRate::create($validated);
-
-        if (! empty($validated['is_default'])) {
-            $taxRate->setDefault();
-        }
-
-        return back()->with('success', 'Tasa de impuesto agregada.');
-    }
-
-    public function updateTaxRate(Request $request, TaxRate $taxRate): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        $validated = $request->validate([
-            'name'       => 'required|string|max:100',
-            'rate'       => 'required|numeric|min:0|max:100',
-            'is_default' => 'boolean',
-            'active'     => 'boolean',
-        ]);
-
-        $taxRate->update($validated);
-
-        if (! empty($validated['is_default'])) {
-            $taxRate->setDefault();
-        }
-
-        return back()->with('success', 'Tasa de impuesto actualizada.');
-    }
-
-    public function deleteTaxRate(Request $request, TaxRate $taxRate): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        if ($taxRate->is_default) {
-            return back()->withErrors(['tax_rate' => 'No puedes eliminar la tasa predeterminada.']);
-        }
-
-        $taxRate->delete();
-
-        return back()->with('success', 'Tasa de impuesto eliminada.');
-    }
-
-    // ── Currencies ────────────────────────────────────────────────────────────
-
-    public function storeCurrency(Request $request): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        $validated = $request->validate([
-            'code'          => 'required|string|max:10|unique:currencies,code',
-            'name'          => 'required|string|max:100',
-            'symbol'        => 'required|string|max:10',
-            'exchange_rate' => 'required|numeric|min:0.000001',
-            'is_primary'    => 'boolean',
-            'active'        => 'boolean',
-        ]);
-
-        $currency = Currency::create($validated);
-
-        if (! empty($validated['is_primary'])) {
-            $currency->setPrimary();
-        }
-
-        return back()->with('success', 'Moneda agregada correctamente.');
-    }
-
-    public function updateCurrency(Request $request, Currency $currency): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        $validated = $request->validate([
-            'code'          => 'required|string|max:10|unique:currencies,code,' . $currency->id,
-            'name'          => 'required|string|max:100',
-            'symbol'        => 'required|string|max:10',
-            'exchange_rate' => 'required|numeric|min:0.000001',
-            'is_primary'    => 'boolean',
-            'active'        => 'boolean',
-        ]);
-
-        $currency->update($validated);
-
-        if (! empty($validated['is_primary'])) {
-            $currency->setPrimary();
-        }
-
-        return back()->with('success', 'Moneda actualizada correctamente.');
-    }
-
-    public function deleteCurrency(Request $request, Currency $currency): RedirectResponse
-    {
-        $this->requireAdmin($request);
-        $this->requireSubscription();
-
-        if ($currency->is_primary) {
-            return back()->withErrors(['currency' => 'No puedes eliminar la moneda principal.']);
-        }
-
-        $currency->delete();
-
-        return back()->with('success', 'Moneda eliminada.');
     }
 
     // ── SMTP ──────────────────────────────────────────────────────────────────

@@ -194,7 +194,6 @@ export default function ReservationForm({ rooms, partners, reservation, selected
                 </div>
             </form>
         </div>
-        </>
     );
 }
 

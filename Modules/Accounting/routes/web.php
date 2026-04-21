@@ -6,6 +6,7 @@ use Modules\Accounting\Http\Controllers\CaiConfigController;
 use Modules\Accounting\Http\Controllers\JournalController;
 use Modules\Accounting\Http\Controllers\MoveController;
 use Modules\Accounting\Http\Controllers\ReportController;
+use Modules\Accounting\Http\Controllers\CurrencyController;
 use Modules\Accounting\Http\Controllers\TaxController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -41,12 +42,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('accounting/moves/{move}/post',    [MoveController::class, 'post'])->name('accounting.moves.post');
     Route::post('accounting/moves/{move}/reverse', [MoveController::class, 'reverse'])->name('accounting.moves.reverse');
 
+    // ── Monedas ────────────────────────────────────────────────────────────────
+    Route::get('accounting/currencies',                  [CurrencyController::class, 'index'])->name('accounting.currencies.index');
+    Route::get('accounting/currencies/create',           [CurrencyController::class, 'create'])->name('accounting.currencies.create');
+    Route::post('accounting/currencies',                 [CurrencyController::class, 'store'])->name('accounting.currencies.store');
+    Route::get('accounting/currencies/{currency}/edit',  [CurrencyController::class, 'edit'])->name('accounting.currencies.edit');
+    Route::patch('accounting/currencies/{currency}',     [CurrencyController::class, 'update'])->name('accounting.currencies.update');
+    Route::delete('accounting/currencies/{currency}',    [CurrencyController::class, 'destroy'])->name('accounting.currencies.destroy');
+
     // ── Impuestos ──────────────────────────────────────────────────────────────
     Route::get('accounting/taxes',                 [TaxController::class, 'index'])->name('accounting.taxes.index');
     Route::get('accounting/taxes/create',          [TaxController::class, 'create'])->name('accounting.taxes.create');
     Route::post('accounting/taxes',                [TaxController::class, 'store'])->name('accounting.taxes.store');
     Route::get('accounting/taxes/{tax}/edit',      [TaxController::class, 'edit'])->name('accounting.taxes.edit');
     Route::patch('accounting/taxes/{tax}',         [TaxController::class, 'update'])->name('accounting.taxes.update');
+    Route::delete('accounting/taxes/{tax}',        [TaxController::class, 'destroy'])->name('accounting.taxes.destroy');
 
     // ── Configuración CAI (Honduras SAR) ──────────────────────────────────────
     Route::get('accounting/cai',                          [CaiConfigController::class, 'index'])->name('accounting.cai.index');

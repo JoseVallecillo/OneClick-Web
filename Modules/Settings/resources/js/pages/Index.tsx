@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { Building2, Globe, Lock, Mail, Settings, Users } from 'lucide-react';
 import { useRef, useState } from 'react';
 
@@ -51,24 +50,6 @@ interface UserOption {
     email: string;
 }
 
-interface TaxRateRow {
-    id: number;
-    name: string;
-    rate: string;       // decimal from PHP comes as string
-    is_default: boolean;
-    active: boolean;
-}
-
-interface CurrencyRow {
-    id: number;
-    code: string;
-    name: string;
-    symbol: string;
-    exchange_rate: string;
-    is_primary: boolean;
-    active: boolean;
-}
-
 interface SmtpSettings {
     host: string;
     port: number;
@@ -81,8 +62,6 @@ interface SmtpSettings {
 interface Props {
     company: Company | null;
     users: UserOption[];
-    currencies: CurrencyRow[];
-    tax_rates: TaxRateRow[];
     smtp: SmtpSettings;
     smtp_configured: boolean;
 }
@@ -457,295 +436,6 @@ function TabSucursales({ branches, users }: { branches: BranchRow[]; users: User
     );
 }
 
-// ── Tab: Operación ─────────────────────────────────────────────────────────────
-
-function TabOperacion({ taxRates, currencies }: { taxRates: TaxRateRow[]; currencies: CurrencyRow[] }) {
-    // ── Tax rates ─────────────────────────────────────────────────────────────
-    const [editingTax, setEditingTax]   = useState<TaxRateRow | null>(null);
-    const [deletingTaxId, setDeletingTaxId] = useState<number | null>(null);
-
-    const { data: td, setData: setTd, post: tPost, patch: tPatch, processing: tProcessing, errors: tErrors, reset: tReset } = useForm({
-        name:       '',
-        rate:       '' as string,
-        is_default: false,
-        active:     true,
-    });
-
-    function startEditTax(t: TaxRateRow) {
-        setEditingTax(t);
-        setTd({ name: t.name, rate: t.rate, is_default: t.is_default, active: t.active });
-    }
-
-    function cancelEditTax() { setEditingTax(null); tReset(); }
-
-    function submitTax(e: React.FormEvent) {
-        e.preventDefault();
-        if (editingTax) {
-            tPatch(`/settings/tax-rates/${editingTax.id}`, { onSuccess: () => cancelEditTax() });
-        } else {
-            tPost('/settings/tax-rates', { onSuccess: () => tReset() });
-        }
-    }
-
-    function deleteTax(t: TaxRateRow) {
-        if (t.is_default) return;
-        if (!confirm(`¿Eliminar la tasa "${t.name}"?`)) return;
-        setDeletingTaxId(t.id);
-        router.delete(`/settings/tax-rates/${t.id}`, { onFinish: () => setDeletingTaxId(null) });
-    }
-
-    // ── Currencies ────────────────────────────────────────────────────────────
-    const [editingCurrency, setEditingCurrency] = useState<CurrencyRow | null>(null);
-    const [deletingId, setDeletingId]           = useState<number | null>(null);
-
-    const { data: cd, setData: setCd, post: cPost, patch: cPatch, processing: cProcessing, errors: cErrors, reset: cReset } = useForm({
-        code:          '',
-        name:          '',
-        symbol:        '',
-        exchange_rate: '1',
-        is_primary:    false,
-        active:        true,
-    });
-
-    function startEditCurrency(c: CurrencyRow) {
-        setEditingCurrency(c);
-        setCd({ code: c.code, name: c.name, symbol: c.symbol, exchange_rate: c.exchange_rate, is_primary: c.is_primary, active: c.active });
-    }
-
-    function cancelEditCurrency() { setEditingCurrency(null); cReset(); }
-
-    function submitCurrency(e: React.FormEvent) {
-        e.preventDefault();
-        if (editingCurrency) {
-            cPatch(`/settings/currencies/${editingCurrency.id}`, { onSuccess: () => cancelEditCurrency() });
-        } else {
-            cPost('/settings/currencies', { onSuccess: () => cReset() });
-        }
-    }
-
-    function deleteCurrency(c: CurrencyRow) {
-        if (!confirm(`¿Eliminar la moneda "${c.name}"?`)) return;
-        setDeletingId(c.id);
-        router.delete(`/settings/currencies/${c.id}`, { onFinish: () => setDeletingId(null) });
-    }
-
-    return (
-        <div className="flex flex-col gap-8">
-            {/* ── Tasas de impuesto ──────────────────────────────────────────── */}
-            <div className="flex flex-col gap-4">
-                <div>
-                    <h3 className="text-sm font-semibold">Tasas de impuesto</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Define todas las tasas que aplican (ISV 15 %, ISV 18 %, Exento, etc.).
-                        Marca una como predeterminada para que se seleccione al crear nuevos artículos.
-                    </p>
-                </div>
-
-                {/* Tax rate form */}
-                <form onSubmit={submitTax} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Nombre</Label>
-                        <Input placeholder="ej. ISV 15 %" value={td.name}
-                            onChange={(e) => setTd('name', e.target.value)} />
-                        {tErrors.name && <p className="text-xs text-destructive">{tErrors.name}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Tasa (%)</Label>
-                        <Input type="number" step="0.01" min="0" max="100" placeholder="15.00"
-                            className="w-28"
-                            value={td.rate}
-                            onChange={(e) => setTd('rate', e.target.value)} />
-                        {tErrors.rate && <p className="text-xs text-destructive">{tErrors.rate}</p>}
-                    </div>
-                    <div className="flex flex-col gap-3 justify-end pb-0.5">
-                        <div className="flex items-center gap-2">
-                            <Checkbox id="t_default" checked={td.is_default}
-                                onCheckedChange={(v) => setTd('is_default', v === true)} />
-                            <Label htmlFor="t_default" className="cursor-pointer">Predeterminada</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Checkbox id="t_active" checked={td.active}
-                                onCheckedChange={(v) => setTd('active', v === true)} />
-                            <Label htmlFor="t_active" className="cursor-pointer">Activa</Label>
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-2">
-                        <Button type="submit" disabled={tProcessing}>
-                            {tProcessing ? <><Spinner className="mr-1" />Guardando…</> : editingTax ? 'Actualizar' : 'Agregar tasa'}
-                        </Button>
-                        {editingTax && (
-                            <Button type="button" variant="outline" onClick={cancelEditTax}>Cancelar</Button>
-                        )}
-                    </div>
-                </form>
-
-                {/* Tax rates table */}
-                {taxRates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                        Aún no se han definido tasas de impuesto. Agrega ISV 15 %, ISV 18 %, Exento (0 %), etc.
-                    </p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b text-left text-muted-foreground">
-                                    <th className="pb-2 pr-4 font-medium">Nombre</th>
-                                    <th className="pb-2 pr-4 font-medium">Tasa</th>
-                                    <th className="pb-2 pr-4 font-medium">Estado</th>
-                                    <th className="pb-2 pr-4 font-medium">Editar</th>
-                                    <th className="pb-2 font-medium">Eliminar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {taxRates.map((t) => (
-                                    <tr key={t.id} className={`border-b last:border-0 ${editingTax?.id === t.id ? 'bg-muted/40' : ''}`}>
-                                        <td className="py-2 pr-4 font-medium">
-                                            {t.name}
-                                            {t.is_default && (
-                                                <Badge variant="default" className="ml-2 text-[10px]">Predeterminada</Badge>
-                                            )}
-                                        </td>
-                                        <td className="py-2 pr-4 font-mono text-muted-foreground">
-                                            {Number(t.rate).toFixed(2)} %
-                                        </td>
-                                        <td className="py-2 pr-4">
-                                            <Badge variant={t.active ? 'secondary' : 'destructive'}>
-                                                {t.active ? 'Activa' : 'Inactiva'}
-                                            </Badge>
-                                        </td>
-                                        <td className="py-2 pr-4">
-                                            <Button variant="ghost" size="sm" className="h-7 text-xs"
-                                                onClick={() => startEditTax(t)}>Editar</Button>
-                                        </td>
-                                        <td className="py-2">
-                                            <Button variant="ghost" size="sm"
-                                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                                disabled={t.is_default || deletingTaxId === t.id}
-                                                title={t.is_default ? 'No puedes eliminar la tasa predeterminada' : ''}
-                                                onClick={() => deleteTax(t)}>
-                                                {deletingTaxId === t.id ? <Spinner className="h-3 w-3" /> : '✕'}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-
-            {/* ── Monedas ────────────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-4">
-                <h3 className="text-sm font-semibold">Monedas</h3>
-
-                {/* Currency form */}
-                <form onSubmit={submitCurrency} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Código</Label>
-                        <Input placeholder="HNL" className="font-mono uppercase" value={cd.code}
-                            onChange={(e) => setCd('code', e.target.value.toUpperCase())} />
-                        {cErrors.code && <p className="text-xs text-destructive">{cErrors.code}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Nombre</Label>
-                        <Input placeholder="Lempira" value={cd.name}
-                            onChange={(e) => setCd('name', e.target.value)} />
-                        {cErrors.name && <p className="text-xs text-destructive">{cErrors.name}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Símbolo</Label>
-                        <Input placeholder="L" className="w-20 font-mono" value={cd.symbol}
-                            onChange={(e) => setCd('symbol', e.target.value)} />
-                        {cErrors.symbol && <p className="text-xs text-destructive">{cErrors.symbol}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Tasa de cambio</Label>
-                        <Input type="number" step="0.000001" min="0.000001" placeholder="1.000000"
-                            value={cd.exchange_rate} onChange={(e) => setCd('exchange_rate', e.target.value)}
-                            disabled={cd.is_primary} />
-                        <p className="text-xs text-muted-foreground">Vs. moneda principal</p>
-                        {cErrors.exchange_rate && <p className="text-xs text-destructive">{cErrors.exchange_rate}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Checkbox id="c_primary" checked={cd.is_primary}
-                            onCheckedChange={(v) => setCd('is_primary', v === true)} />
-                        <Label htmlFor="c_primary" className="cursor-pointer">Moneda principal</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Checkbox id="c_active" checked={cd.active}
-                            onCheckedChange={(v) => setCd('active', v === true)} />
-                        <Label htmlFor="c_active" className="cursor-pointer">Activa</Label>
-                    </div>
-                    <div className="flex items-end gap-2 sm:col-span-2">
-                        <Button type="submit" disabled={cProcessing}>
-                            {cProcessing ? <><Spinner className="mr-1" />Guardando…</> : editingCurrency ? 'Actualizar moneda' : 'Agregar moneda'}
-                        </Button>
-                        {editingCurrency && (
-                            <Button type="button" variant="outline" onClick={cancelEditCurrency}>Cancelar</Button>
-                        )}
-                    </div>
-                </form>
-
-                {/* Currencies table */}
-                {currencies.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aún no se han definido monedas.</p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b text-left text-muted-foreground">
-                                    <th className="pb-2 pr-4 font-medium">Código</th>
-                                    <th className="pb-2 pr-4 font-medium">Nombre</th>
-                                    <th className="pb-2 pr-4 font-medium">Símbolo</th>
-                                    <th className="pb-2 pr-4 font-medium">Tasa de cambio</th>
-                                    <th className="pb-2 pr-4 font-medium">Estado</th>
-                                    <th className="pb-2 pr-4 font-medium">Editar</th>
-                                    <th className="pb-2 font-medium">Eliminar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {currencies.map((c) => (
-                                    <tr key={c.id} className={`border-b last:border-0 ${editingCurrency?.id === c.id ? 'bg-muted/40' : ''}`}>
-                                        <td className="py-2 pr-4 font-mono font-medium">
-                                            {c.code}
-                                            {c.is_primary && (
-                                                <Badge variant="default" className="ml-2 text-[10px]">Principal</Badge>
-                                            )}
-                                        </td>
-                                        <td className="py-2 pr-4">{c.name}</td>
-                                        <td className="py-2 pr-4 font-mono">{c.symbol}</td>
-                                        <td className="py-2 pr-4 font-mono text-muted-foreground">
-                                            {c.is_primary ? '1.000000' : Number(c.exchange_rate).toFixed(6)}
-                                        </td>
-                                        <td className="py-2 pr-4">
-                                            <Badge variant={c.active ? 'secondary' : 'destructive'}>
-                                                {c.active ? 'Activa' : 'Inactiva'}
-                                            </Badge>
-                                        </td>
-                                        <td className="py-2 pr-4">
-                                            <Button variant="ghost" size="sm" className="h-7 text-xs"
-                                                onClick={() => startEditCurrency(c)}>Editar</Button>
-                                        </td>
-                                        <td className="py-2">
-                                            <Button variant="ghost" size="sm"
-                                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                                disabled={c.is_primary || deletingId === c.id}
-                                                title={c.is_primary ? 'No puedes eliminar la moneda principal' : ''}
-                                                onClick={() => deleteCurrency(c)}>
-                                                {deletingId === c.id ? <Spinner className="h-3 w-3" /> : '✕'}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
 // ── Tab: Correo SMTP ───────────────────────────────────────────────────────────
 
 function TabCorreo({ smtp, smtpConfigured }: { smtp: SmtpSettings; smtpConfigured: boolean }) {
@@ -859,7 +549,7 @@ function TabCorreo({ smtp, smtpConfigured }: { smtp: SmtpSettings; smtpConfigure
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function SettingsIndex({ company, users, currencies, tax_rates, smtp, smtp_configured }: Props) {
+export default function SettingsIndex({ company, users, smtp, smtp_configured }: Props) {
     const { props } = usePage<{
         flash?: { success?: string; error?: string; setup_notice?: string };
         auth: { setup: { has_company: boolean; has_branch: boolean; has_subscription: boolean } };
@@ -869,10 +559,9 @@ export default function SettingsIndex({ company, users, currencies, tax_rates, s
     const blockedByCompany = !setup.has_company;
     const blockedBySubscription = !setup.has_subscription;
     const sucursalesLocked = blockedByCompany;
-    const operacionLocked = blockedByCompany || blockedBySubscription;
     const correoLocked = blockedByCompany || blockedBySubscription;
 
-    type Tab = 'empresa' | 'sucursales' | 'operacion' | 'correo';
+    type Tab = 'empresa' | 'sucursales' | 'correo';
     const [tab, setTab] = useState<Tab>('empresa');
 
     const branches = company?.branches ?? [];
@@ -937,14 +626,6 @@ export default function SettingsIndex({ company, users, currencies, tax_rates, s
                                 )}
                             </TabButton>
                             <TabButton
-                                active={tab === 'operacion'}
-                                onClick={() => !operacionLocked && setTab('operacion')}
-                                icon={operacionLocked ? Lock : Settings}
-                                className={operacionLocked ? 'cursor-not-allowed opacity-50' : ''}
-                            >
-                                Operación
-                            </TabButton>
-                            <TabButton
                                 active={tab === 'correo'}
                                 onClick={() => !correoLocked && setTab('correo')}
                                 icon={correoLocked ? Lock : Mail}
@@ -959,16 +640,15 @@ export default function SettingsIndex({ company, users, currencies, tax_rates, s
                     <CardContent className="pt-6">
                         {tab === 'empresa'    && <TabEmpresa company={company} />}
                         {tab === 'sucursales' && !sucursalesLocked && <TabSucursales branches={branches} users={users} />}
-                        {tab === 'operacion'  && !operacionLocked && <TabOperacion taxRates={tax_rates ?? []} currencies={currencies ?? []} />}
                         {tab === 'correo'     && !correoLocked && <TabCorreo smtp={smtp} smtpConfigured={smtp_configured} />}
-                        {(tab === 'sucursales' || tab === 'operacion' || tab === 'correo') && blockedByCompany && (
+                        {(tab === 'sucursales' || tab === 'correo') && blockedByCompany && (
                             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground gap-3">
                                 <Lock className="h-10 w-10 opacity-30" />
                                 <p className="font-medium">Empresa requerida</p>
                                 <p className="text-sm">Guarda primero la información de la empresa para habilitar estas secciones.</p>
                             </div>
                         )}
-                        {(tab === 'operacion' || tab === 'correo') && !blockedByCompany && blockedBySubscription && (
+                        {tab === 'correo' && !blockedByCompany && blockedBySubscription && (
                             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground gap-3">
                                 <Lock className="h-10 w-10 opacity-30" />
                                 <p className="font-medium">Licencia requerida</p>

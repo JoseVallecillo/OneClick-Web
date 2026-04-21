@@ -35,7 +35,7 @@ function fmtRate(tax: TaxRow) {
 }
 
 export default function TaxesIndex({ taxes }: { taxes: PaginatedTaxes }) {
-    const { props } = usePage<{ flash?: { success?: string } }>();
+    const { props } = usePage<{ flash?: { success?: string; setup_notice?: string } }>();
     const flash = props.flash;
 
     const { data } = taxes;
@@ -45,6 +45,11 @@ export default function TaxesIndex({ taxes }: { taxes: PaginatedTaxes }) {
         <>
             <Head title="Impuestos" />
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
+                {flash?.setup_notice && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        ⚠️ {flash.setup_notice}
+                    </div>
+                )}
                 {flash?.success && (
                     <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{flash.success}</div>
                 )}

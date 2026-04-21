@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Modules\Rentals\Models\RentalRate;
-use Modules\Settings\Models\TaxRate;
+use Modules\Accounting\Models\Tax;
 
 class Product extends Model
 {
@@ -66,7 +66,7 @@ class Product extends Model
 
     public function taxRate(): BelongsTo
     {
-        return $this->belongsTo(TaxRate::class, 'tax_rate_id');
+        return $this->belongsTo(Tax::class, 'tax_rate_id');
     }
 
     public function stockQuantities(): HasMany

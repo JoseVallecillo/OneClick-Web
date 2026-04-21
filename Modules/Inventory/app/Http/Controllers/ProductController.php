@@ -10,7 +10,7 @@ use Inertia\Response;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\ProductCategory;
 use Modules\Inventory\Models\UnitOfMeasure;
-use Modules\Settings\Models\TaxRate;
+use Modules\Accounting\Models\Tax;
 
 class ProductController extends Controller
 {
@@ -82,7 +82,7 @@ class ProductController extends Controller
             'product'    => null,
             'categories' => ProductCategory::where('active', true)->orderBy('name')->get(),
             'uoms'       => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
-            'taxRates'   => TaxRate::where('active', true)->orderBy('rate')->get(),
+            'taxRates'   => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
         ]);
     }
 
@@ -103,7 +103,7 @@ class ProductController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'category_id' => ['required', 'exists:product_categories,id'],
             'uom_id'      => ['required_unless:type,service', 'nullable', 'exists:units_of_measure,id'],
-            'tax_rate_id' => ['nullable', 'exists:tax_rates,id'],
+            'tax_rate_id' => ['nullable', 'exists:account_taxes,id'],
             'type'        => ['required', 'in:storable,service,consumable'],
             'tracking'    => ['required', 'in:none,lot,serial'],
             'valuation'   => ['required', 'in:average,fifo'],
@@ -128,7 +128,7 @@ class ProductController extends Controller
             'product'    => $product,
             'categories' => ProductCategory::where('active', true)->orderBy('name')->get(),
             'uoms'       => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
-            'taxRates'   => TaxRate::where('active', true)->orderBy('rate')->get(),
+            'taxRates'   => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
         ]);
     }
 
@@ -149,7 +149,7 @@ class ProductController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'category_id' => ['required', 'exists:product_categories,id'],
             'uom_id'      => ['required_unless:type,service', 'nullable', 'exists:units_of_measure,id'],
-            'tax_rate_id' => ['nullable', 'exists:tax_rates,id'],
+            'tax_rate_id' => ['nullable', 'exists:account_taxes,id'],
             'type'        => ['required', 'in:storable,service,consumable'],
             'tracking'    => ['required', 'in:none,lot,serial'],
             'valuation'   => ['required', 'in:average,fifo'],

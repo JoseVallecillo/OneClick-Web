@@ -112,6 +112,7 @@ interface Props {
 
 const WORKFLOW_STEPS = ['draft', 'confirmed', 'active', 'returned', 'invoiced', 'closed'];
 
+export default function RentalShow({ order }: Props) {
     return (
         <>
             <Head title={`Orden ${order.reference}`} />

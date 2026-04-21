@@ -13,9 +13,11 @@ class EnsureCompanyExists
      * Auth, selector de sucursal y las rutas de creación de empresa/sucursal.
      */
     private const EXEMPT_PREFIXES = [
-        'settings',         // todo /settings/* (crear empresa, sucursal)
+        'settings',              // todo /settings/* (crear empresa, sucursal)
         'select-branch',
         'activate-license',
+        'accounting/currencies', // configuración inicial de monedas
+        'accounting/taxes',      // configuración inicial de impuestos
         'login',
         'logout',
         'register',
@@ -60,6 +62,22 @@ class EnsureCompanyExists
             if (! $hasBranch) {
                 return redirect('/settings')
                     ->with('setup_notice', 'Debes crear al menos una sucursal activa antes de continuar.');
+            }
+
+            // Verificar que exista al menos una moneda configurada
+            if (class_exists(\Modules\Settings\Models\Currency::class)) {
+                if (! \Modules\Settings\Models\Currency::exists()) {
+                    return redirect('/accounting/currencies')
+                        ->with('setup_notice', 'Configura al menos una moneda antes de usar el sistema.');
+                }
+            }
+
+            // Verificar que exista al menos un impuesto configurado
+            if (class_exists(\Modules\Accounting\Models\Tax::class)) {
+                if (! \Modules\Accounting\Models\Tax::exists()) {
+                    return redirect('/accounting/taxes')
+                        ->with('setup_notice', 'Configura al menos un impuesto antes de usar el sistema.');
+                }
             }
         } catch (\Throwable) {
             // Tablas no creadas aún — dejar pasar

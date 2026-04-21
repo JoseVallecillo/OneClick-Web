@@ -84,4 +84,15 @@ class TaxController extends Controller
         return redirect()->route('accounting.taxes.index')
             ->with('success', "Impuesto {$tax->name} actualizado.");
     }
+
+    public function destroy(Request $request, Tax $tax): RedirectResponse
+    {
+        $this->requireAdmin($request);
+        $this->requireSubscription();
+
+        $tax->delete();
+
+        return redirect()->route('accounting.taxes.index')
+            ->with('success', 'Impuesto eliminado.');
+    }
 }

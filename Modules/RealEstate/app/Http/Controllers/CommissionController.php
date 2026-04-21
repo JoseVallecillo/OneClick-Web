@@ -29,7 +29,7 @@ class CommissionController extends Controller
         }
 
         $commissions = $query->orderByDesc('id')->paginate(30)->withQueryString();
-        $agents      = User::where('active', true)->orderBy('name')->get(['id', 'name']);
+        $agents      = User::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('RealEstate::Commissions/Index', [
             'commissions' => $commissions,

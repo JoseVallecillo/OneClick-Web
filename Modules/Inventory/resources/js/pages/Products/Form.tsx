@@ -44,6 +44,8 @@ interface SelectOption {
 interface TaxRate {
     id: number;
     name: string;
+    code: string;
+    type: 'percentage' | 'fixed' | 'exempt';
     rate: number;
 }
 
@@ -231,7 +233,7 @@ export default function ProductForm({ product, categories, uoms, taxRates }: Pro
                                         <SelectItem value="__none__">Sin impuesto</SelectItem>
                                         {taxRates.map((t) => (
                                             <SelectItem key={t.id} value={String(t.id)}>
-                                                {t.name} ({t.rate}%)
+                                                {t.name} {t.type === 'exempt' ? '(Exento)' : t.type === 'fixed' ? `(L.${t.rate})` : `(${t.rate}%)`}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

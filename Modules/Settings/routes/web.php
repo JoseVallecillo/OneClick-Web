@@ -24,16 +24,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Parámetros de operación
     Route::post('settings/operation', [SettingsController::class, 'updateOperation'])->name('settings.operation.update');
 
-    // Tasas de impuesto
-    Route::post('settings/tax-rates', [SettingsController::class, 'storeTaxRate'])->name('settings.tax-rates.store');
-    Route::patch('settings/tax-rates/{taxRate}', [SettingsController::class, 'updateTaxRate'])->name('settings.tax-rates.update');
-    Route::delete('settings/tax-rates/{taxRate}', [SettingsController::class, 'deleteTaxRate'])->name('settings.tax-rates.delete');
-
-    // Monedas
-    Route::post('settings/currencies', [SettingsController::class, 'storeCurrency'])->name('settings.currencies.store');
-    Route::patch('settings/currencies/{currency}', [SettingsController::class, 'updateCurrency'])->name('settings.currencies.update');
-    Route::delete('settings/currencies/{currency}', [SettingsController::class, 'deleteCurrency'])->name('settings.currencies.delete');
-
     // SMTP
     Route::post('settings/smtp', [SettingsController::class, 'updateSmtp'])->name('settings.smtp.update');
     Route::post('settings/smtp/test', [SettingsController::class, 'testSmtp'])->name('settings.smtp.test');

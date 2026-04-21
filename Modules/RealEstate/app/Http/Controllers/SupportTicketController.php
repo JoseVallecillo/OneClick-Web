@@ -37,7 +37,7 @@ class SupportTicketController extends Controller
         }
 
         $tickets   = $query->orderByDesc('id')->paginate(30)->withQueryString();
-        $agents    = User::where('active', true)->orderBy('name')->get(['id', 'name']);
+        $agents    = User::orderBy('name')->get(['id', 'name']);
         $contacts  = Contact::where('active', true)->orderBy('name')->get(['id', 'name']);
         $properties = Property::orderBy('title')->get(['id', 'reference', 'title']);
 

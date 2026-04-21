@@ -13,5 +13,6 @@
     "Subscriptions": true,
     "Accounting": true,
     "Rentals": true,
-    "Hospitality": true
+    "Hospitality": true,
+    "RealEstate": true
 }

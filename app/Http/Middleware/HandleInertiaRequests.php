@@ -189,7 +189,13 @@ class HandleInertiaRequests extends Middleware
      */
     private function resolveSetup(Request $request): array
     {
-        $default = ['has_company' => false, 'has_branch' => false, 'has_subscription' => false];
+        $default = [
+            'has_company'      => false,
+            'has_branch'       => false,
+            'has_currency'     => false,
+            'has_tax'          => false,
+            'has_subscription' => false,
+        ];
 
         if (! $request->user()) {
             return $default;
@@ -206,6 +212,12 @@ class HandleInertiaRequests extends Middleware
             $company    = $companyClass::first();
             $hasBranch  = $branchClass::where('active', true)->exists();
 
+            $hasCurrency = class_exists(\Modules\Settings\Models\Currency::class)
+                && \Modules\Settings\Models\Currency::exists();
+
+            $hasTax = class_exists(\Modules\Accounting\Models\Tax::class)
+                && \Modules\Accounting\Models\Tax::exists();
+
             $hasSubscription = false;
             if ($company) {
                 $serviceClass = \Modules\Subscriptions\Services\SubscriptionService::class;
@@ -217,6 +229,8 @@ class HandleInertiaRequests extends Middleware
             return [
                 'has_company'      => $company !== null,
                 'has_branch'       => $hasBranch,
+                'has_currency'     => $hasCurrency,
+                'has_tax'          => $hasTax,
                 'has_subscription' => $hasSubscription,
             ];
         } catch (\Throwable) {

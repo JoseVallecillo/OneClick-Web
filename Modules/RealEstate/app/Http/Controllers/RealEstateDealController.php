@@ -58,7 +58,7 @@ class RealEstateDealController extends Controller
             'properties' => Property::where('status', 'available')->orderBy('title')->get(['id', 'reference', 'title', 'type', 'sale_price', 'rent_price', 'currency']),
             'contacts'   => Contact::where('is_client', true)->where('active', true)->orderBy('name')->get(['id', 'name']),
             'leads'      => RealEstateLead::whereIn('status', ['qualified', 'proposal', 'negotiating'])->orderBy('name')->get(['id', 'reference', 'name']),
-            'agents'     => User::where('active', true)->orderBy('name')->get(['id', 'name']),
+            'agents'     => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -125,7 +125,7 @@ class RealEstateDealController extends Controller
             'properties' => Property::whereIn('status', ['available', 'reserved'])->orderBy('title')->get(['id', 'reference', 'title', 'type', 'sale_price', 'rent_price', 'currency']),
             'contacts'   => Contact::where('is_client', true)->where('active', true)->orderBy('name')->get(['id', 'name']),
             'leads'      => RealEstateLead::whereIn('status', ['qualified', 'proposal', 'negotiating'])->orderBy('name')->get(['id', 'reference', 'name']),
-            'agents'     => User::where('active', true)->orderBy('name')->get(['id', 'name']),
+            'agents'     => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -302,8 +302,7 @@ class RealEstateDealController extends Controller
 
     public function lookupAgents(Request $request)
     {
-        return User::where('active', true)
-            ->where('name', 'ilike', '%' . $request->input('q', '') . '%')
+        return User::where('name', 'ilike', '%' . $request->input('q', '') . '%')
             ->limit(20)
             ->get(['id', 'name']);
     }
