@@ -156,6 +156,16 @@ export default function RoomBoard({ rooms, stats }: Props) {
                     </div>
 
                     <div className="flex gap-2">
+                        <Link href="/hospitality/room-types">
+                            <Button size="sm" variant="outline" className="text-xs h-8 font-semibold">
+                                Tipos
+                            </Button>
+                        </Link>
+                        <Link href="/hospitality/rooms/list">
+                            <Button size="sm" variant="outline" className="text-xs h-8 font-semibold">
+                                Habitaciones
+                            </Button>
+                        </Link>
                         <Link href="/hospitality/reservations">
                             <Button size="sm" variant="outline" className="text-xs h-8 font-semibold">
                                 Reservaciones
