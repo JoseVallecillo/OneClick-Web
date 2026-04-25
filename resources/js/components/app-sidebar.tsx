@@ -25,6 +25,7 @@ import {
     LayoutGrid,
     Monitor,
     Package,
+    Scissors,
     ShoppingCart,
 } from 'lucide-react';
 
@@ -70,6 +71,20 @@ const mainNavItems: NavItem[] = [
                 title: 'Configuración',
                 href: '/inventory/config',
             },
+        ],
+    },
+    {
+        title: 'Barbería',
+        href: '/barbershop',
+        icon: Scissors,
+        items: [
+            { title: 'Panel',         href: '/barbershop' },
+            { title: 'Citas',         href: '/barbershop/appointments' },
+            { title: 'Cola de espera', href: '/barbershop/queue' },
+            { title: 'Clientes',      href: '/barbershop/clients' },
+            { title: 'Barberos',      href: '/barbershop/barbers' },
+            { title: 'Servicios',     href: '/barbershop/services' },
+            { title: 'Configuración', href: '/barbershop/config' },
         ],
     },
     {
