@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { useState } from 'react';
 
 const fmt = (n: any) => Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,16 +21,17 @@ const PAR_COLOR: Record<string, string> = {
     current: 'text-green-600', par1: 'text-yellow-600', par30: 'text-orange-600', par60: 'text-red-600', par90: 'text-red-800',
 };
 
+const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Microfinanzas', href: '/microfinance' },
+        { title: 'Grupos', href: '/microfinance/groups' },
+        { title: group.name, href: '#' },
+    ];
+
 export default function GroupShow({ group }: Props) {
     const [showAddMember, setShowAddMember] = useState(false);
     const [memberSearch, setMemberSearch] = useState('');
     const [results, setResults] = useState<any[]>([]);
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Microfinanzas', href: '/microfinance' },
-        { title: 'Grupos', href: '/microfinance/groups' },
-        { title: group.name, href: '#' },
-    ];
 
     const searchClients = async (q: string) => {
         setMemberSearch(q);
@@ -52,7 +52,8 @@ export default function GroupShow({ group }: Props) {
     const activeMembers = group.members.filter(m => m.status === 'active');
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
@@ -160,6 +161,8 @@ export default function GroupShow({ group }: Props) {
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+GroupShow.layout = { breadcrumbs };

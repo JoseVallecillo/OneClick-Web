@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router } from '@inertiajs/react';
+import { Head,  router  } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -32,7 +31,8 @@ export default function GroupsIndex({ groups, filters }: Props) {
     const filter = () => router.get('/microfinance/groups', { search, status }, { preserveState: true, replace: true });
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-semibold">Grupos Solidarios</h1>
@@ -97,6 +97,8 @@ export default function GroupsIndex({ groups, filters }: Props) {
                     </div>
                 )}
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+GroupsIndex.layout = { breadcrumbs };

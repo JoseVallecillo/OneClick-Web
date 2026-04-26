@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { Camera, MapPin } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,17 +32,18 @@ interface Client {
 }
 interface Props { client: Client }
 
+const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Microfinanzas', href: '/microfinance' },
+        { title: 'Clientes', href: '/microfinance/clients' },
+        { title: `${client.first_name} ${client.last_name}`, href: `#` },
+    ];
+
 export default function ClientShow({ client }: Props) {
     const [tab, setTab] = useState<'loans' | 'snapshots' | 'references' | 'groups'>('loans');
     const [showSnap, setShowSnap] = useState(false);
 
     const snapForm = useForm({ inventory_value: '', daily_sales_estimated: '', monthly_expenses_verified: '', monthly_net_estimated: '', observations: '' });
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Microfinanzas', href: '/microfinance' },
-        { title: 'Clientes', href: '/microfinance/clients' },
-        { title: `${client.first_name} ${client.last_name}`, href: `#` },
-    ];
 
     const activeLoans = client.loans.filter(l => ['disbursed','current','delinquent'].includes(l.status));
     const totalDebt   = activeLoans.reduce((s, l) => s + Number(l.principal_balance), 0);
@@ -56,7 +56,8 @@ export default function ClientShow({ client }: Props) {
     const scoreBreakdown = client.score_breakdown ? Object.entries(client.score_breakdown) : [];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
@@ -291,6 +292,8 @@ export default function ClientShow({ client }: Props) {
                     </form>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+ClientShow.layout = { breadcrumbs };

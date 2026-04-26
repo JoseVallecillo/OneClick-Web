@@ -25,6 +25,7 @@ class Product extends Model
         'cost',
         'price',
         'min_stock',
+        'image_path',
         'active',
     ];
 

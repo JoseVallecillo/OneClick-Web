@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -81,7 +80,8 @@ export default function ConfigProducts({ products }: Props) {
     const toggle = (id: number) => router.patch(`/microfinance/config/products/${id}/toggle`);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-semibold">Productos de crédito</h1>
@@ -245,6 +245,8 @@ export default function ConfigProducts({ products }: Props) {
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+ConfigProducts.layout = { breadcrumbs };

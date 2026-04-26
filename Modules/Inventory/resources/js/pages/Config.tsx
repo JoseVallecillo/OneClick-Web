@@ -12,9 +12,10 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { ImagePicker } from '@/components/image-picker';
 import { dashboard } from '@/routes';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ interface CategoryRow {
     account_inventory: string | null;
     account_income: string | null;
     account_cogs: string | null;
+    image_path: string | null;
     active: boolean;
 }
 
@@ -69,6 +71,7 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
         account_inventory: '',
         account_income: '',
         account_cogs: '',
+        image_path: '',
         active: true as boolean,
     });
 
@@ -79,6 +82,7 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
             account_inventory: row.account_inventory ?? '',
             account_income: row.account_income ?? '',
             account_cogs: row.account_cogs ?? '',
+            image_path: row.image_path ?? '',
             active: row.active,
         });
     }
@@ -159,6 +163,16 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
                                 onChange={(e) => setData('account_cogs', e.target.value)}
                             />
                         </div>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="cat_image">Imagen de Categoría</Label>
+                            <ImagePicker
+                                id="cat_image"
+                                folder="categories"
+                                placeholder="categories/example.jpg"
+                                value={data.image_path}
+                                onChange={(val) => setData('image_path', val)}
+                            />
+                        </div>
                         <div className="flex items-end gap-2 pb-1">
                             <div className="flex items-center gap-2">
                                 <Checkbox
@@ -197,6 +211,7 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b text-left text-muted-foreground">
+                                        <th className="pb-2 pr-4 font-medium italic text-[10px] uppercase tracking-wider">Imagen</th>
                                         <th className="pb-2 pr-4 font-medium">Nombre</th>
                                         <th className="pb-2 pr-4 font-medium">Cta. Inventario</th>
                                         <th className="pb-2 pr-4 font-medium">Cta. Ingresos</th>
@@ -209,6 +224,15 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
                                 <tbody>
                                     {categories.map((row) => (
                                         <tr key={row.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                                            <td className="py-2 pr-4">
+                                                <div className="h-8 w-8 overflow-hidden rounded-md border bg-muted">
+                                                    {row.image_path ? (
+                                                        <img src={`/storage/${row.image_path}`} alt={row.name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <Package className="h-full w-full p-1.5 opacity-20" />
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="py-2 pr-4 font-medium">{row.name}</td>
                                             <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.account_inventory ?? '—'}</td>
                                             <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.account_income ?? '—'}</td>

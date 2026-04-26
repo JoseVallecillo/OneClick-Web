@@ -9,11 +9,12 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight, Clock, Pencil, Plus, Scissors, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-interface CategoryOption { id: number; name: string; color: string; }
 interface ServiceRow {
-    id: number; name: string; description: string | null; duration_minutes: number;
-    price: number; commission_rate: number; active: boolean;
-    category: CategoryOption | null;
+    id: number;
+    duration_minutes: number;
+    commission_rate: number;
+    active: boolean;
+    product: { id: number; name: string; price: number } | null;
 }
 interface PaginatedServices {
     data: ServiceRow[];
@@ -21,39 +22,38 @@ interface PaginatedServices {
     current_page?: number; last_page?: number; from?: number | null; to?: number | null; total?: number;
     meta?: { current_page: number; last_page: number; from: number | null; to: number | null; total: number };
 }
-interface Props { services: PaginatedServices; categories: CategoryOption[]; filters: { search?: string; category_id?: string; active?: string }; }
+interface Props { services: PaginatedServices; filters: { search?: string; active?: string }; }
 
 function fmtCurrency(n: number) {
     return new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL', minimumFractionDigits: 2 }).format(n);
 }
 
-export default function ServicesIndex({ services, categories, filters }: Props) {
+export default function ServicesIndex({ services, filters }: Props) {
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
-    const [search, setSearch]         = useState(filters.search ?? '');
-    const [categoryId, setCategoryId] = useState(filters.category_id ?? '');
+    const [search, setSearch]             = useState(filters.search ?? '');
     const [activeFilter, setActiveFilter] = useState(filters.active ?? '');
-    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deletingId, setDeletingId]     = useState<number | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => navigate(search, categoryId, activeFilter), 350);
+        debounceRef.current = setTimeout(() => navigate(search, activeFilter), 350);
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    function navigate(s: string, c: string, a: string) {
+    function navigate(s: string, a: string) {
         const p: Record<string, string> = {};
         if (s) p.search = s;
-        if (c) p.category_id = c;
         if (a) p.active = a;
         router.get('/barbershop/services', p, { preserveState: true, replace: true });
     }
 
     function del(svc: ServiceRow) {
-        if (!confirm(`¿Eliminar el servicio "${svc.name}"? Esta acción no se puede deshacer.`)) return;
+        const name = svc.product?.name ?? 'este servicio';
+        if (!confirm(`¿Eliminar la configuración de "${name}"? El producto en Inventario no se eliminará.`)) return;
         setDeletingId(svc.id);
         router.delete(`/barbershop/services/${svc.id}`, { onFinish: () => setDeletingId(null) });
     }
@@ -75,14 +75,7 @@ export default function ServicesIndex({ services, categories, filters }: Props) 
                                 <Input placeholder="Buscar servicio…" className="h-9 pl-4 pr-8 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
                                 {search && <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setSearch('')}><X className="h-3.5 w-3.5" /></button>}
                             </div>
-                            <Select value={categoryId || '__all__'} onValueChange={v => { const c = v === '__all__' ? '' : v; setCategoryId(c); navigate(search, c, activeFilter); }}>
-                                <SelectTrigger className="h-9 w-44 text-sm"><SelectValue placeholder="Categoría" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">Todas las categorías</SelectItem>
-                                    {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <Select value={activeFilter || '__all__'} onValueChange={v => { const a = v === '__all__' ? '' : v; setActiveFilter(a); navigate(search, categoryId, a); }}>
+                            <Select value={activeFilter || '__all__'} onValueChange={v => { const a = v === '__all__' ? '' : v; setActiveFilter(a); navigate(search, a); }}>
                                 <SelectTrigger className="h-9 w-32 text-sm"><SelectValue placeholder="Estado" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="__all__">Todos</SelectItem>
@@ -102,8 +95,9 @@ export default function ServicesIndex({ services, categories, filters }: Props) 
                         {data.length === 0 ? (
                             <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
                                 <Scissors className="h-8 w-8 opacity-30" />
-                                <p className="text-sm">No se encontraron servicios.</p>
-                                <Link href="/barbershop/services/create"><Button variant="outline" size="sm">Nuevo servicio</Button></Link>
+                                <p className="text-sm">No hay servicios configurados.</p>
+                                <p className="text-xs">Crea un producto en Inventario y luego configúralo aquí.</p>
+                                <Link href="/barbershop/services/create"><Button variant="outline" size="sm">Configurar servicio</Button></Link>
                             </div>
                         ) : (
                             <>
@@ -111,10 +105,9 @@ export default function ServicesIndex({ services, categories, filters }: Props) 
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b text-left text-muted-foreground">
-                                                <th className="pb-2 pr-3 font-medium">Servicio</th>
-                                                <th className="pb-2 pr-3 font-medium">Categoría</th>
-                                                <th className="pb-2 pr-3 font-medium">Duración</th>
+                                                <th className="pb-2 pr-3 font-medium">Servicio (Inventario)</th>
                                                 <th className="pb-2 pr-3 font-medium text-right">Precio</th>
+                                                <th className="pb-2 pr-3 font-medium">Duración</th>
                                                 <th className="pb-2 pr-3 font-medium text-right">Comisión</th>
                                                 <th className="pb-2 pr-3 font-medium">Estado</th>
                                                 <th className="pb-2 pr-3 font-medium">Editar</th>
@@ -125,18 +118,12 @@ export default function ServicesIndex({ services, categories, filters }: Props) 
                                             {data.map(svc => (
                                                 <tr key={svc.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                                                     <td className="py-2 pr-3">
-                                                        <div>
-                                                            <Link href={`/barbershop/services/${svc.id}/edit`} className="font-medium hover:text-primary hover:underline">{svc.name}</Link>
-                                                            {svc.description && <p className="text-xs text-muted-foreground line-clamp-1">{svc.description}</p>}
-                                                        </div>
+                                                        <Link href={`/barbershop/services/${svc.id}/edit`} className="font-medium hover:text-primary hover:underline">
+                                                            {svc.product?.name ?? '—'}
+                                                        </Link>
                                                     </td>
-                                                    <td className="py-2 pr-3">
-                                                        {svc.category ? (
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: svc.category.color }} />
-                                                                <span className="text-xs">{svc.category.name}</span>
-                                                            </div>
-                                                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                                                    <td className="py-2 pr-3 text-right text-xs font-semibold tabular-nums">
+                                                        {svc.product ? fmtCurrency(svc.product.price) : '—'}
                                                     </td>
                                                     <td className="py-2 pr-3">
                                                         <div className="flex items-center gap-1 text-xs">
@@ -144,7 +131,6 @@ export default function ServicesIndex({ services, categories, filters }: Props) 
                                                             {svc.duration_minutes} min
                                                         </div>
                                                     </td>
-                                                    <td className="py-2 pr-3 text-right text-xs font-semibold tabular-nums">{fmtCurrency(svc.price)}</td>
                                                     <td className="py-2 pr-3 text-right text-xs tabular-nums">{svc.commission_rate}%</td>
                                                     <td className="py-2 pr-3">
                                                         <Badge variant={svc.active ? 'secondary' : 'outline'} className="text-[10px]">{svc.active ? 'Activo' : 'Inactivo'}</Badge>

@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -36,7 +35,8 @@ export default function TreasuryDisbursements({ pending, disbursements }: Props)
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <h1 className="text-xl font-semibold">Desembolsos</h1>
 
@@ -152,6 +152,8 @@ export default function TreasuryDisbursements({ pending, disbursements }: Props)
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+TreasuryDisbursements.layout = { breadcrumbs };

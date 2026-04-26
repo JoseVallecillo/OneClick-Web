@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router } from '@inertiajs/react';
+import { Head,  router  } from '@inertiajs/react';
 import { useState } from 'react';
 
 const fmt = (n: any) => Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -34,6 +33,12 @@ const PROMISE_COLORS: Record<string, string> = {
     broken: 'bg-red-100 text-red-700', partial: 'bg-orange-100 text-orange-700',
 };
 
+const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Microfinanzas', href: '/microfinance' },
+        { title: 'Cartera', href: '/microfinance/loans' },
+        { title: loan.loan_number, href: '#' },
+    ];
+
 export default function LoanShow({ loan }: Props) {
     const [tab, setTab] = useState<'schedule' | 'payments' | 'promises'>('schedule');
     const [showPay, setShowPay] = useState(false);
@@ -42,18 +47,14 @@ export default function LoanShow({ loan }: Props) {
     const [payMethod, setPayMethod] = useState('cash');
     const [disburseData, setDisburseData] = useState({ disbursement_channel: 'cash', bank_name: '', account_number: '', transfer_reference: '', first_payment_date: '' });
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Microfinanzas', href: '/microfinance' },
-        { title: 'Cartera', href: '/microfinance/loans' },
-        { title: loan.loan_number, href: '#' },
-    ];
 
     const submitPay = () => router.post(`/microfinance/loans/${loan.id}/payment`, { amount: payAmount, payment_method: payMethod }, { onSuccess: () => { setShowPay(false); setPayAmount(''); } });
     const submitApprove = () => router.post(`/microfinance/loans/${loan.id}/approve`, { amount_approved: loan.amount_requested });
     const submitDisburse = () => router.post(`/microfinance/loans/${loan.id}/disburse`, disburseData, { onSuccess: () => setShowDisburse(false) });
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
@@ -280,6 +281,8 @@ export default function LoanShow({ loan }: Props) {
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+LoanShow.layout = { breadcrumbs };

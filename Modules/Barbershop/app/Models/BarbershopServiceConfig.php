@@ -5,24 +5,20 @@ namespace Modules\Barbershop\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Inventory\Models\Product;
 
-class BarbershopService extends Model
+class BarbershopServiceConfig extends Model
 {
-    protected $table = 'barbershop_services';
+    protected $table = 'barbershop_service_configs';
 
     protected $fillable = [
-        'category_id',
-        'name',
-        'description',
+        'product_id',
         'duration_minutes',
-        'price',
         'commission_rate',
         'active',
     ];
 
     protected $casts = [
-        'price'           => 'decimal:2',
         'commission_rate' => 'decimal:2',
         'active'          => 'boolean',
     ];
@@ -32,13 +28,8 @@ class BarbershopService extends Model
         return $query->where('active', true);
     }
 
-    public function category(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(BarbershopServiceCategory::class, 'category_id');
-    }
-
-    public function appointmentServices(): HasMany
-    {
-        return $this->hasMany(AppointmentService::class, 'service_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }

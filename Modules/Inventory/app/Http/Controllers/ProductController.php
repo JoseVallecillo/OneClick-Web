@@ -41,7 +41,7 @@ class ProductController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $query = Product::with(['category', 'uom'])
+        $query = Product::with(['category', 'uom', 'taxRate'])
             ->withSum('stockQuantities as total_stock', 'quantity')
             ->withSum('stockQuantities as total_reserved', 'reserved_quantity');
 
@@ -110,13 +110,14 @@ class ProductController extends Controller
             'cost'        => ['required', 'numeric', 'min:0'],
             'price'       => ['required', 'numeric', 'min:0'],
             'min_stock'   => ['numeric', 'min:0'],
+            'image_path'  => ['nullable', 'string', 'max:500'],
             'active'      => ['boolean'],
         ]);
 
         $product = Product::create($data);
 
-        return redirect()->route('inventory.products.index')
-            ->with('success', 'Product created successfully.');
+        return redirect()->route('inventory.products.create')
+            ->with('success', "Producto '{$product->name}' creado correctamente. Puedes agregar otro.");
     }
 
     public function edit(Request $request, Product $product): Response
@@ -156,6 +157,7 @@ class ProductController extends Controller
             'cost'        => ['required', 'numeric', 'min:0'],
             'price'       => ['required', 'numeric', 'min:0'],
             'min_stock'   => ['numeric', 'min:0'],
+            'image_path'  => ['nullable', 'string', 'max:500'],
             'active'      => ['boolean'],
         ]);
 

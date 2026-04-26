@@ -71,7 +71,7 @@ class AccountController extends Controller
 
         $account = Account::create(array_merge($data, ['is_leaf' => true]));
 
-        return redirect()->route('accounting.accounts.index')
+        return redirect()->route('accounting.accounts.create')
             ->with('success', "Cuenta {$account->code} — {$account->name} creada.");
     }
 

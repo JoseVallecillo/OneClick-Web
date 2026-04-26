@@ -1,8 +1,18 @@
-import AppLayout from '@/layouts/app-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { type BreadcrumbItem } from '@/types';
-import { router } from '@inertiajs/react';
-import { CheckCircle, MapPin, MessageCircle, Phone, XCircle } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { CheckCircle, MapPin, MessageCircle, Phone, X, XCircle } from 'lucide-react';
 import { useState } from 'react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Microfinanzas', href: '/microfinance' },
+    { title: 'Ruta de cobro', href: '#' },
+];
 
 const fmt = (n: any) => Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -16,21 +26,11 @@ interface Stop {
 interface Route { id: number; route_date: string; status: string; total_stops: number; visited_stops: number; expected_amount: number; collected_amount: number; stops: Stop[] }
 interface Props { route: Route; date: string }
 
-const STOP_COLORS: Record<string, string> = {
-    pending: 'border-gray-200 bg-white', collected: 'border-green-200 bg-green-50',
-    promise: 'border-yellow-200 bg-yellow-50', not_found: 'border-gray-200 bg-gray-50', partial: 'border-blue-200 bg-blue-50',
-};
-
 export default function CollectionRoute({ route, date }: Props) {
     const [active, setActive] = useState<Stop | null>(null);
     const [amount, setAmount]   = useState('');
     const [resultStatus, setResultStatus] = useState('collected');
     const [notes, setNotes]     = useState('');
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Microfinanzas', href: '/microfinance' },
-        { title: 'Ruta de cobro', href: '#' },
-    ];
 
     const pendingStops    = route.stops.filter(s => s.status === 'pending');
     const completedStops  = route.stops.filter(s => s.status !== 'pending');
@@ -61,149 +61,212 @@ export default function CollectionRoute({ route, date }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <div className="flex h-full flex-1 flex-col gap-3 p-3">
-                {/* Summary bar */}
-                <div className="rounded-xl border bg-white p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-lg font-semibold">Ruta del día</h1>
-                            <p className="text-xs text-gray-400">{new Date(date + 'T12:00:00').toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-2xl font-bold text-green-600">{collectionPct}%</p>
-                            <p className="text-xs text-gray-400">L.{fmt(route.collected_amount)} / L.{fmt(route.expected_amount)}</p>
-                        </div>
-                    </div>
-                    {/* Progress bar */}
-                    <div className="mt-3 h-2.5 w-full rounded-full bg-gray-100">
-                        <div className="h-2.5 rounded-full bg-green-500 transition-all" style={{ width: `${collectionPct}%` }} />
-                    </div>
-                    <div className="mt-1 flex justify-between text-xs text-gray-400">
-                        <span>{route.visited_stops} visitados</span>
-                        <span>{route.total_stops - route.visited_stops} pendientes</span>
-                    </div>
+        <>
+            <Head title="Ruta de Cobro" />
+            
+            <div className="flex h-full flex-1 flex-col gap-6 p-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="md:col-span-2">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-xl">Ruta del día - {new Date(date + 'T12:00:00').toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' })}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-muted-foreground">Progreso de cobro</span>
+                                <span className="font-bold text-primary">{collectionPct}%</span>
+                            </div>
+                            <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                                <div className="h-full bg-primary transition-all duration-1000 ease-out" style={{ width: `${collectionPct}%` }} />
+                            </div>
+                            <div className="mt-3 flex justify-between text-xs font-medium text-muted-foreground">
+                                <span>{route.visited_stops} visitados</span>
+                                <span>{route.total_stops - route.visited_stops} pendientes</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-xl text-center">Recaudación</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                            <p className="text-3xl font-black text-primary">L.{fmt(route.collected_amount)}</p>
+                            <p className="text-sm font-medium text-muted-foreground mt-1">de L.{fmt(route.expected_amount)} esperados</p>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Pending stops */}
                 {pendingStops.length > 0 && (
-                    <div>
-                        <p className="mb-2 px-1 text-xs font-semibold uppercase text-gray-400">Pendientes ({pendingStops.length})</p>
-                        <div className="space-y-2">
-                            {pendingStops.map(stop => (
-                                <div key={stop.id} className={`rounded-xl border-2 p-4 ${stop.days_overdue >= 3 ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-white'}`}>
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold">{stop.client.first_name} {stop.client.last_name}</span>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                Paradas Pendientes
+                                <Badge variant="secondary">{pendingStops.length}</Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {pendingStops.map((stop) => (
+                                    <div key={stop.id} className="flex flex-col gap-4 rounded-xl border bg-card text-card-foreground shadow-sm p-5 transition-colors hover:bg-muted/50">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div>
+                                                <h3 className="font-semibold">{stop.client.first_name} {stop.client.last_name}</h3>
+                                                <p className="text-sm text-muted-foreground">{stop.loan.loan_number}</p>
                                                 {stop.days_overdue > 0 && (
-                                                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">+{stop.days_overdue}d mora</span>
+                                                    <Badge variant="destructive" className="mt-1">+{stop.days_overdue} días mora</Badge>
                                                 )}
                                             </div>
-                                            <p className="mt-0.5 text-xs text-gray-500">{stop.loan.loan_number} · {stop.loan.product.name}</p>
-                                            {stop.client.address && <p className="mt-0.5 text-xs text-gray-400">{stop.client.address}</p>}
+                                            <div className="text-right">
+                                                <p className="text-xs text-muted-foreground">A cobrar</p>
+                                                <p className="font-bold text-lg">L.{fmt(stop.amount_due)}</p>
+                                            </div>
                                         </div>
-                                        <div className="ml-3 text-right">
-                                            <p className="text-xl font-bold text-gray-800">L.{fmt(stop.amount_due)}</p>
+                                        
+                                        {stop.client.address && (
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <MapPin className="h-3 w-3 shrink-0" />
+                                                <span className="line-clamp-2">{stop.client.address}</span>
+                                            </p>
+                                        )}
+
+                                        <div className="mt-auto flex items-center gap-2 pt-2">
+                                            <Button className="flex-1" onClick={() => openStop(stop)}>
+                                                Registrar Cobro
+                                            </Button>
+                                            <Button variant="outline" size="icon" onClick={() => openMap(stop)}>
+                                                <MapPin className="h-4 w-4" />
+                                            </Button>
+                                            {stop.client.phone_mobile && (
+                                                <Button variant="outline" size="icon" asChild>
+                                                    <a href={`tel:${stop.client.phone_mobile}`}><Phone className="h-4 w-4" /></a>
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
-                                    {/* Action buttons */}
-                                    <div className="mt-3 flex gap-2">
-                                        <button onClick={() => openStop(stop)}
-                                            className="flex-1 rounded-lg bg-black py-2.5 text-sm font-medium text-white">
-                                            Registrar cobro
-                                        </button>
-                                        <button onClick={() => openMap(stop)} className="rounded-lg border p-2.5 hover:bg-gray-50">
-                                            <MapPin className="h-5 w-5 text-gray-500" />
-                                        </button>
-                                        {stop.client.phone_mobile && (
-                                            <a href={`tel:${stop.client.phone_mobile}`} className="rounded-lg border p-2.5 hover:bg-gray-50">
-                                                <Phone className="h-5 w-5 text-gray-500" />
-                                            </a>
-                                        )}
-                                        {stop.client.phone_whatsapp && (
-                                            <a href={`https://wa.me/${stop.client.phone_whatsapp?.replace(/\D/g,'')}`} target="_blank" className="rounded-lg border p-2.5 hover:bg-gray-50">
-                                                <MessageCircle className="h-5 w-5 text-green-500" />
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
 
-                {/* Completed stops */}
                 {completedStops.length > 0 && (
-                    <div>
-                        <p className="mb-2 px-1 text-xs font-semibold uppercase text-gray-400">Completados ({completedStops.length})</p>
-                        <div className="space-y-1.5">
-                            {completedStops.map(stop => (
-                                <div key={stop.id} className={`flex items-center justify-between rounded-xl border p-3 ${STOP_COLORS[stop.status]}`}>
-                                    <div className="flex items-center gap-2">
-                                        {stop.status === 'collected' ? <CheckCircle className="h-5 w-5 text-green-500" /> : stop.status === 'not_found' ? <XCircle className="h-5 w-5 text-gray-400" /> : <div className="h-5 w-5 rounded-full border-2 border-yellow-400 bg-yellow-100" />}
-                                        <div>
-                                            <p className="text-sm font-medium">{stop.client.first_name} {stop.client.last_name}</p>
-                                            {stop.notes && <p className="text-xs text-gray-400">{stop.notes}</p>}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        {stop.collected_amount > 0 && <p className="font-bold text-green-600">L.{fmt(stop.collected_amount)}</p>}
-                                        <p className="text-xs text-gray-400 capitalize">{stop.status === 'collected' ? 'Cobrado' : stop.status === 'promise' ? 'Promesa' : stop.status === 'not_found' ? 'No encontrado' : 'Parcial'}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                Paradas Completadas
+                                <Badge variant="secondary">{completedStops.length}</Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b text-left text-muted-foreground">
+                                            <th className="pb-2 font-medium">Estado</th>
+                                            <th className="pb-2 font-medium">Cliente</th>
+                                            <th className="pb-2 font-medium">Notas</th>
+                                            <th className="pb-2 font-medium text-right">Cobrado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {completedStops.map(stop => (
+                                            <tr key={stop.id} className="group">
+                                                <td className="py-3 pr-4">
+                                                    {stop.status === 'collected' ? <Badge className="bg-emerald-500 hover:bg-emerald-600">Cobrado</Badge> : 
+                                                     stop.status === 'promise' ? <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">Promesa</Badge> : 
+                                                     stop.status === 'not_found' ? <Badge variant="outline">No enc.</Badge> : 
+                                                     <Badge className="bg-indigo-500 hover:bg-indigo-600">Parcial</Badge>}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    <p className="font-medium">{stop.client.first_name} {stop.client.last_name}</p>
+                                                    <p className="text-xs text-muted-foreground">{stop.loan.loan_number}</p>
+                                                </td>
+                                                <td className="py-3 pr-4 text-xs text-muted-foreground max-w-[200px] truncate">
+                                                    {stop.notes || '—'}
+                                                </td>
+                                                <td className="py-3 text-right font-medium">
+                                                    {stop.collected_amount > 0 ? `L.${fmt(stop.collected_amount)}` : '—'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
 
                 {route.stops.length === 0 && (
-                    <div className="flex flex-1 flex-col items-center justify-center text-gray-400">
-                        <CheckCircle className="mb-3 h-12 w-12 text-green-300" />
-                        <p>No hay cobros programados para hoy</p>
-                    </div>
+                    <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                            <CheckCircle className="h-12 w-12 mb-4 opacity-50" />
+                            <p className="font-semibold text-lg">Al día</p>
+                            <p className="text-sm">No hay cobros programados para hoy</p>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
 
             {/* Stop action modal */}
             {active && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-                    <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
-                        <h3 className="mb-1 font-semibold">{active.client.first_name} {active.client.last_name}</h3>
-                        <p className="mb-4 text-xs text-gray-400">Cuota: L.{fmt(active.amount_due)} · {active.loan.loan_number}</p>
-
-                        {/* Result selector */}
-                        <div className="mb-4 grid grid-cols-4 gap-2">
-                            {[['collected','Cobrado','bg-green-500'], ['partial','Parcial','bg-blue-500'], ['promise','Promesa','bg-yellow-500'], ['not_found','No enc.','bg-gray-400']].map(([val, label, color]) => (
-                                <button key={val} type="button" onClick={() => setResultStatus(val)}
-                                    className={`rounded-lg py-2 text-xs font-medium text-white ${resultStatus === val ? color : 'bg-gray-200 text-gray-600'}`}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {resultStatus !== 'not_found' && resultStatus !== 'promise' && (
-                            <div className="mb-3">
-                                <label className="mb-1 block text-xs font-medium text-gray-600">Monto cobrado (L.)</label>
-                                <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)}
-                                    className="w-full rounded-xl border px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-black" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <Card className="w-full max-w-md shadow-lg">
+                        <CardHeader className="flex flex-row items-start justify-between pb-4 border-b">
+                            <div>
+                                <CardTitle>{active.client.first_name} {active.client.last_name}</CardTitle>
+                                <p className="text-sm text-muted-foreground mt-1">{active.loan.loan_number} · Cuota: L.{fmt(active.amount_due)}</p>
                             </div>
-                        )}
+                            <Button variant="ghost" size="icon" onClick={() => setActive(null)} className="h-6 w-6 rounded-full">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="grid grid-cols-2 gap-2 mb-6">
+                                {[['collected','Cobro Total'], ['partial','Cobro Parcial'], ['promise','Promesa'], ['not_found','No Encontrado']].map(([val, label]) => (
+                                    <Button 
+                                        key={val} 
+                                        type="button" 
+                                        variant={resultStatus === val ? 'default' : 'outline'}
+                                        onClick={() => setResultStatus(val)}
+                                        className="w-full"
+                                    >
+                                        {label}
+                                    </Button>
+                                ))}
+                            </div>
 
-                        <div className="mb-4">
-                            <label className="mb-1 block text-xs font-medium text-gray-600">Notas (opcional)</label>
-                            <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
-                                placeholder="Observaciones..."
-                                className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none" />
-                        </div>
+                            {resultStatus !== 'not_found' && resultStatus !== 'promise' && (
+                                <div className="space-y-2 mb-6">
+                                    <Label>Monto cobrado (L.)</Label>
+                                    <Input 
+                                        type="number" 
+                                        step="0.01" 
+                                        value={amount} 
+                                        onChange={e => setAmount(e.target.value)}
+                                        className="text-lg font-bold"
+                                    />
+                                </div>
+                            )}
 
-                        <div className="flex gap-2">
-                            <button onClick={() => setActive(null)} className="flex-1 rounded-xl border py-3 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-                            <button onClick={submitStop} className="flex-1 rounded-xl bg-black py-3 text-sm font-medium text-white hover:bg-gray-900">Confirmar</button>
-                        </div>
-                    </div>
+                            <div className="space-y-2 mb-6">
+                                <Label>Notas u observaciones</Label>
+                                <Textarea 
+                                    value={notes} 
+                                    onChange={e => setNotes(e.target.value)}
+                                    placeholder="Escribe un comentario opcional..." 
+                                    className="resize-none"
+                                />
+                            </div>
+
+                            <Button onClick={submitStop} className="w-full font-semibold">
+                                Confirmar Registro
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+CollectionRoute.layout = { breadcrumbs };

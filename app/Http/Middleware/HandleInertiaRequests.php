@@ -37,7 +37,8 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name'           => config('app.name'),
+            'enabledModules' => $this->resolveEnabledModules(),
             'auth' => [
                 // Cargamos el perfil junto al usuario para que all_permissions
                 // no dispare una query adicional cuando se llame en controllers.
@@ -50,6 +51,23 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Returns the aliases of all currently enabled modules.
+     *
+     * @return string[]
+     */
+    private function resolveEnabledModules(): array
+    {
+        try {
+            return collect(\Nwidart\Modules\Facades\Module::allEnabled())
+                ->map(fn ($m) => $m->getName())
+                ->values()
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { Download, FileText } from 'lucide-react';
 import { useState } from 'react';
 
@@ -25,7 +24,8 @@ export default function ReportsCreditBureau({ snapshots }: Props) {
     const download = (id: number) => window.open(`/microfinance/reports/credit-bureau/${id}/download`, '_blank');
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-semibold">Archivos Buró de Crédito</h1>
@@ -105,6 +105,8 @@ export default function ReportsCreditBureau({ snapshots }: Props) {
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </>
     );
 }
+
+ReportsCreditBureau.layout = { breadcrumbs };

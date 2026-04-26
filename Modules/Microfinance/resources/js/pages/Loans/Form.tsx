@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -66,140 +65,188 @@ export default function LoanForm({ products, clients, groups = [] }: Props) {
     const selectedClient = clients.find(c => String(c.id) === data.client_id);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <form onSubmit={e => { e.preventDefault(); post('/microfinance/loans'); }} className="mx-auto max-w-4xl space-y-5 p-4">
-                <h1 className="text-xl font-semibold">Nueva solicitud de crédito</h1>
+        <>
+            <Head title="Microfinanzas" />
+            <div className="bg-[#f8fafc] min-h-full">
+                <form onSubmit={e => { e.preventDefault(); post('/microfinance/loans'); }} className="mx-auto max-w-5xl space-y-6 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva solicitud de crédito</h1>
+                            <p className="text-sm text-slate-500 mt-1">Complete los datos para generar la tabla de amortización.</p>
+                        </div>
+                    </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2 space-y-4">
-                        <div className="rounded-lg border bg-white p-4">
-                            <h2 className="mb-4 text-sm font-semibold text-gray-700">Datos del crédito</h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                                <h2 className="mb-6 text-lg font-bold text-slate-900 border-b pb-4">Datos del Crédito</h2>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Cliente *</label>
-                                    <select value={data.client_id} onChange={e => onClientChange(e.target.value)} required className="w-full rounded border px-3 py-2 text-sm">
-                                        <option value="">Seleccionar...</option>
-                                        {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.client_number}) — Score: {c.internal_score} — Ciclo {c.completed_cycles + 1}</option>)}
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Producto *</label>
-                                    <select value={data.product_id} onChange={e => onProductChange(e.target.value)} required className="w-full rounded border px-3 py-2 text-sm">
-                                        <option value="">Seleccionar...</option>
-                                        {products.map(p => <option key={p.id} value={p.id}>{p.name} ({FREQ_LABELS[p.payment_frequency]}, {p.annual_rate}%)</option>)}
-                                    </select>
-                                </div>
-                                {groups.length > 0 && (
                                     <div className="col-span-2">
-                                        <label className="mb-1 block text-xs font-medium text-gray-600">Grupo solidario</label>
-                                        <select value={data.group_id} onChange={e => setData('group_id', e.target.value)} className="w-full rounded border px-3 py-2 text-sm">
-                                            <option value="">Individual (sin grupo)</option>
-                                            {groups.map(g => <option key={g.id} value={g.id} disabled={g.is_blocked}>{g.group_number} — {g.name}{g.is_blocked ? ' 🔒' : ''}</option>)}
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Cliente *</label>
+                                        <select value={data.client_id} onChange={e => onClientChange(e.target.value)} required className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                            <option value="">Seleccionar...</option>
+                                            {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.client_number}) — Score: {c.internal_score} — Ciclo {c.completed_cycles + 1}</option>)}
                                         </select>
                                     </div>
-                                )}
-                                <div>
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Monto solicitado (L.) *</label>
-                                    <input type="number" step="0.01" value={data.amount_requested} onChange={e => setData('amount_requested', e.target.value)} required
-                                        min={product?.min_amount} max={cycleLimit ?? product?.max_amount}
-                                        className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black" />
-                                    {product && <p className="mt-0.5 text-xs text-gray-400">Rango: L.{fmt(product.min_amount)} – L.{fmt(cycleLimit ?? product.max_amount)}{cycleLimit ? ' (límite ciclo)' : ''}</p>}
+                                    <div className="col-span-2">
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Producto *</label>
+                                        <select value={data.product_id} onChange={e => onProductChange(e.target.value)} required className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                            <option value="">Seleccionar...</option>
+                                            {products.map(p => <option key={p.id} value={p.id}>{p.name} ({FREQ_LABELS[p.payment_frequency]}, {p.annual_rate}%)</option>)}
+                                        </select>
+                                    </div>
+                                    {groups.length > 0 && (
+                                        <div className="col-span-2">
+                                            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Grupo solidario</label>
+                                            <select value={data.group_id} onChange={e => setData('group_id', e.target.value)} className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                                <option value="">Individual (sin grupo)</option>
+                                                {groups.map(g => <option key={g.id} value={g.id} disabled={g.is_blocked}>{g.group_number} — {g.name}{g.is_blocked ? ' 🔒' : ''}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Monto solicitado (L.) *</label>
+                                        <input type="number" step="0.01" value={data.amount_requested} onChange={e => setData('amount_requested', e.target.value)} required
+                                            min={product?.min_amount} max={cycleLimit ?? product?.max_amount}
+                                            className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
+                                        {product && <p className="mt-1.5 text-xs font-medium text-indigo-600">Rango: L.{fmt(product.min_amount)} – L.{fmt(cycleLimit ?? product.max_amount)}{cycleLimit ? ' (límite ciclo)' : ''}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">N° cuotas *</label>
+                                        <input type="number" value={data.term_payments} onChange={e => setData('term_payments', e.target.value)} required
+                                            min={product?.min_term_payments} max={product?.max_term_payments}
+                                            className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
+                                        {product && <p className="mt-1.5 text-xs font-medium text-slate-500">{product.min_term_payments}–{product.max_term_payments} cuotas {FREQ_LABELS[product.payment_frequency].toLowerCase()}s</p>}
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Primer pago *</label>
+                                        <input type="date" value={data.first_payment_date} onChange={e => setData('first_payment_date', e.target.value)} required className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Zona de cobro</label>
+                                        <input type="text" value={data.collection_zone} onChange={e => setData('collection_zone', e.target.value)} className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Destino del crédito *</label>
+                                        <input type="text" value={data.purpose} onChange={e => setData('purpose', e.target.value)} required className="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">N° cuotas *</label>
-                                    <input type="number" value={data.term_payments} onChange={e => setData('term_payments', e.target.value)} required
-                                        min={product?.min_term_payments} max={product?.max_term_payments}
-                                        className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black" />
-                                    {product && <p className="mt-0.5 text-xs text-gray-400">{product.min_term_payments}–{product.max_term_payments} cuotas {FREQ_LABELS[product.payment_frequency].toLowerCase()}s</p>}
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Primer pago *</label>
-                                    <input type="date" value={data.first_payment_date} onChange={e => setData('first_payment_date', e.target.value)} required className="w-full rounded border px-3 py-2 text-sm" />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Zona de cobro</label>
-                                    <input type="text" value={data.collection_zone} onChange={e => setData('collection_zone', e.target.value)} className="w-full rounded border px-3 py-2 text-sm focus:outline-none" />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="mb-1 block text-xs font-medium text-gray-600">Destino del crédito *</label>
-                                    <input type="text" value={data.purpose} onChange={e => setData('purpose', e.target.value)} required className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                                <div className="mt-8 flex justify-end">
+                                    <button type="button" onClick={fetchPreview} className="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                        {loading ? 'Calculando...' : 'Ver plan de pagos'}
+                                    </button>
                                 </div>
                             </div>
-                            <button type="button" onClick={fetchPreview} className="mt-4 rounded border px-3 py-1.5 text-sm hover:bg-gray-50">
-                                {loading ? 'Calculando...' : 'Ver plan de pagos'}
-                            </button>
+
+                            {/* Preview table */}
+                            {preview.length > 0 && (
+                                <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                    <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900">Plan de pagos</p>
+                                            <p className="text-xs font-medium text-slate-500 mt-1">Estimación según parámetros del producto</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold text-slate-900">L.{fmt(totalCost)}</p>
+                                            <p className="text-xs font-medium text-emerald-600 mt-1">Cuota: L.{fmt(firstInstallment)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="max-h-72 overflow-y-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="sticky top-0 bg-white border-b border-slate-100 shadow-sm z-10">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">No.</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Vencimiento</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Capital</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Interés</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-900">Cuota</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Saldo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {preview.map(r => (
+                                                    <tr key={r.installment_number} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-6 py-3 text-slate-500 font-medium">{r.installment_number}</td>
+                                                        <td className="px-6 py-3 font-medium text-slate-700">{new Date(r.due_date).toLocaleDateString('es-HN')}</td>
+                                                        <td className="px-6 py-3 text-right text-slate-600">{fmt(r.principal)}</td>
+                                                        <td className="px-6 py-3 text-right text-slate-600">{fmt(r.interest)}</td>
+                                                        <td className="px-6 py-3 text-right font-bold text-slate-900">{fmt(r.total_due)}</td>
+                                                        <td className="px-6 py-3 text-right text-slate-400">{fmt(r.balance_after)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Preview table */}
-                        {preview.length > 0 && (
-                            <div className="rounded-lg border bg-white">
-                                <div className="border-b px-4 py-3">
-                                    <p className="text-sm font-semibold">Plan de pagos</p>
-                                    <p className="text-xs text-gray-400">Cuota: L.{fmt(firstInstallment)} {FREQ_LABELS[product?.payment_frequency ?? 'monthly'].toLowerCase()} · Costo total: L.{fmt(totalCost)}</p>
-                                </div>
-                                <div className="max-h-56 overflow-y-auto">
-                                    <table className="w-full text-xs">
-                                        <thead className="sticky top-0 border-b bg-gray-50">
-                                            <tr>
-                                                <th className="px-3 py-2 text-center">#</th>
-                                                <th className="px-3 py-2 text-left">Vence</th>
-                                                <th className="px-3 py-2 text-right">Capital</th>
-                                                <th className="px-3 py-2 text-right">Interés</th>
-                                                <th className="px-3 py-2 text-right font-bold">Cuota</th>
-                                                <th className="px-3 py-2 text-right">Saldo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y">
-                                            {preview.map(r => (
-                                                <tr key={r.installment_number}>
-                                                    <td className="px-3 py-1.5 text-center text-gray-400">{r.installment_number}</td>
-                                                    <td className="px-3 py-1.5">{new Date(r.due_date).toLocaleDateString('es-HN')}</td>
-                                                    <td className="px-3 py-1.5 text-right">{fmt(r.principal)}</td>
-                                                    <td className="px-3 py-1.5 text-right">{fmt(r.interest)}</td>
-                                                    <td className="px-3 py-1.5 text-right font-bold">{fmt(r.total_due)}</td>
-                                                    <td className="px-3 py-1.5 text-right text-gray-400">{fmt(r.balance_after)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Summary sidebar */}
-                    <div className="space-y-4">
-                        {selectedClient && (
-                            <div className="rounded-lg border bg-white p-4 text-xs space-y-2">
-                                <p className="font-semibold text-gray-700 mb-1">Perfil del cliente</p>
-                                <div className="flex justify-between"><span className="text-gray-400">Score interno:</span><span className={`font-bold ${selectedClient.internal_score >= 70 ? 'text-green-600' : selectedClient.internal_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{selectedClient.internal_score}/100</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Cap. pago mensual:</span><span>L.{fmt(selectedClient.monthly_payment_capacity)}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Ciclos completados:</span><span>{selectedClient.completed_cycles}</span></div>
-                                {firstInstallment > 0 && selectedClient.monthly_payment_capacity > 0 && (
-                                    <div className="flex justify-between pt-1 border-t">
-                                        <span className="text-gray-400">Ratio cuota/cap.:</span>
-                                        <span className={`font-bold ${firstInstallment / selectedClient.monthly_payment_capacity < 0.4 ? 'text-green-600' : firstInstallment / selectedClient.monthly_payment_capacity < 0.7 ? 'text-yellow-600' : 'text-red-600'}`}>
-                                            {(firstInstallment / selectedClient.monthly_payment_capacity * 100).toFixed(0)}%
-                                        </span>
+                        {/* Summary sidebar */}
+                        <div className="space-y-6">
+                            {selectedClient && (
+                                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+                                    <h3 className="font-bold text-slate-900 border-b pb-3">Perfil Analítico</h3>
+                                    
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Score Interno</span>
+                                            <span className={`text-sm font-black ${selectedClient.internal_score >= 70 ? 'text-emerald-500' : selectedClient.internal_score >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{selectedClient.internal_score}/100</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4">
+                                            <div className={`h-1.5 rounded-full ${selectedClient.internal_score >= 70 ? 'bg-emerald-500' : selectedClient.internal_score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${selectedClient.internal_score}%` }}></div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        )}
-                        {product && data.amount_requested && (
-                            <div className="rounded-lg border bg-gray-50 p-4 text-xs space-y-1">
-                                <p className="font-semibold text-gray-700 mb-2">Costos iniciales</p>
-                                <div className="flex justify-between"><span className="text-gray-500">Comisión apertura:</span><span className="font-medium">L.{fmt(fee)}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-500">Seguro ({product.insurance_pct}%/cuota):</span><span className="font-medium">L.{fmt(Number(data.amount_requested) * product.insurance_pct / 100)}</span></div>
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => router.visit('/microfinance/loans')} className="rounded border px-4 py-2 text-sm hover:bg-gray-50">Cancelar</button>
-                    <button type="submit" disabled={processing} className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-900 disabled:opacity-50">Guardar solicitud</button>
-                </div>
-            </form>
-        </AppLayout>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Dspl. Mensual</span>
+                                        <span className="text-sm font-bold text-slate-900">L.{fmt(selectedClient.monthly_payment_capacity)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Ciclos Completados</span>
+                                        <span className="text-sm font-bold text-slate-900">{selectedClient.completed_cycles}</span>
+                                    </div>
+
+                                    {firstInstallment > 0 && selectedClient.monthly_payment_capacity > 0 && (
+                                        <div className="pt-4 border-t mt-4">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Impacto Cuota</span>
+                                                <span className={`text-sm font-black ${firstInstallment / selectedClient.monthly_payment_capacity < 0.4 ? 'text-emerald-500' : firstInstallment / selectedClient.monthly_payment_capacity < 0.7 ? 'text-amber-500' : 'text-red-500'}`}>
+                                                    {(firstInstallment / selectedClient.monthly_payment_capacity * 100).toFixed(0)}%
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 rounded-full h-1.5">
+                                                <div className={`h-1.5 rounded-full ${firstInstallment / selectedClient.monthly_payment_capacity < 0.4 ? 'bg-emerald-500' : firstInstallment / selectedClient.monthly_payment_capacity < 0.7 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, firstInstallment / selectedClient.monthly_payment_capacity * 100)}%` }}></div>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 mt-2 text-right">Mide el peso de la cuota vs ingresos netos.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {product && data.amount_requested && (
+                                <div className="rounded-3xl bg-indigo-50 border border-indigo-100 p-6 space-y-4">
+                                    <h3 className="font-bold text-indigo-900 border-b border-indigo-200 pb-3">Cargos Adicionales</h3>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-600/70">Comisión Apertura</span>
+                                        <span className="text-sm font-bold text-indigo-900">L.{fmt(fee)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-600/70">Seguro Vida ({product.insurance_pct}%)</span>
+                                        <span className="text-sm font-bold text-indigo-900">L.{fmt(Number(data.amount_requested) * product.insurance_pct / 100)}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
+                        <button type="button" onClick={() => router.visit('/microfinance/loans')} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+                        <button type="submit" disabled={processing} className="rounded-xl bg-indigo-600 px-8 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-200 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 transition-all">Generar Solicitud</button>
+                    </div>
+                </form>
+            </div>
+        </>
     );
 }
+
+LoanForm.layout = { breadcrumbs };

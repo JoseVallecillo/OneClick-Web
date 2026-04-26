@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router, useForm } from '@inertiajs/react';
+import { Head,  router, useForm  } from '@inertiajs/react';
 import { Camera, MapPin, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,12 +14,13 @@ const field = (label: string, el: React.ReactNode) => (
     <div><label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>{el}</div>
 );
 
-export default function ClientForm({ client, isEdit = false }: Props) {
-    const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Microfinanzas', href: '/microfinance' },
         { title: 'Clientes', href: '/microfinance/clients' },
         { title: isEdit ? 'Editar' : 'Nuevo cliente', href: '#' },
     ];
+
+export default function ClientForm({ client, isEdit = false }: Props) {
 
     const { data, setData, post, patch, processing, errors } = useForm({
         first_name: client?.first_name ?? '',
@@ -68,7 +68,8 @@ export default function ClientForm({ client, isEdit = false }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <form onSubmit={submit} className="mx-auto max-w-3xl space-y-5 p-4">
                 <h1 className="text-xl font-semibold">{isEdit ? 'Editar cliente' : 'Nuevo cliente'}</h1>
 
@@ -132,6 +133,8 @@ export default function ClientForm({ client, isEdit = false }: Props) {
                     </button>
                 </div>
             </form>
-        </AppLayout>
+        </>
     );
 }
+
+ClientForm.layout = { breadcrumbs };

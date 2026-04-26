@@ -7,8 +7,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Modules\Barbershop\Models\BarbershopService;
-use Modules\Barbershop\Models\BarbershopServiceCategory;
+use Modules\Barbershop\Models\BarbershopServiceConfig;
+use Modules\Inventory\Models\Product;
 
 class BarbershopServiceController extends Controller
 {
@@ -17,26 +17,19 @@ class BarbershopServiceController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $query = BarbershopService::with('category');
+        $query = BarbershopServiceConfig::with('product:id,name,price')
+            ->when($request->input('search'), fn ($q, $s) =>
+                $q->whereHas('product', fn ($p) => $p->where('name', 'ilike', "%{$s}%"))
+            )
+            ->when($request->input('active') !== null && $request->input('active') !== '', fn ($q) =>
+                $q->where('active', (bool) $request->input('active'))
+            );
 
-        if ($search = $request->input('search')) {
-            $query->where('name', 'ilike', "%{$search}%");
-        }
-
-        if ($categoryId = $request->input('category_id')) {
-            $query->where('category_id', $categoryId);
-        }
-
-        if ($request->has('active') && $request->input('active') !== '') {
-            $query->where('active', filter_var($request->input('active'), FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $services = $query->orderBy('name')->paginate(50)->withQueryString();
+        $services = $query->paginate(50)->withQueryString();
 
         return Inertia::render('Barbershop::Services/Index', [
-            'services'   => $services,
-            'categories' => BarbershopServiceCategory::active()->orderBy('name')->get(),
-            'filters'    => $request->only(['search', 'category_id', 'active']),
+            'services' => $services,
+            'filters'  => $request->only(['search', 'active']),
         ]);
     }
 
@@ -45,9 +38,16 @@ class BarbershopServiceController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
+        $usedIds = BarbershopServiceConfig::pluck('product_id');
+
+        $products = Product::where('active', true)
+            ->whereNotIn('id', $usedIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'price']);
+
         return Inertia::render('Barbershop::Services/Form', [
-            'service'    => null,
-            'categories' => BarbershopServiceCategory::active()->orderBy('name')->get(),
+            'config'   => null,
+            'products' => $products,
         ]);
     }
 
@@ -56,70 +56,57 @@ class BarbershopServiceController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $request->merge([
-            'category_id' => $request->category_id === '__none__' ? null : $request->category_id,
-        ]);
-
         $data = $request->validate([
-            'category_id'     => ['nullable', 'exists:barbershop_service_categories,id'],
-            'name'            => ['required', 'string', 'max:150'],
-            'description'     => ['nullable', 'string', 'max:1000'],
+            'product_id'       => ['required', 'exists:products,id', 'unique:barbershop_service_configs,product_id'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
-            'price'           => ['required', 'numeric', 'min:0'],
-            'commission_rate' => ['required', 'numeric', 'min:0', 'max:100'],
-            'active'          => ['boolean'],
+            'commission_rate'  => ['required', 'numeric', 'min:0', 'max:100'],
+            'active'           => ['boolean'],
         ]);
 
-        BarbershopService::create($data);
+        BarbershopServiceConfig::create($data);
 
         return redirect()->route('barbershop.services.index')
-            ->with('success', 'Servicio creado correctamente.');
+            ->with('success', 'Servicio configurado correctamente.');
     }
 
-    public function edit(Request $request, BarbershopService $service): Response
+    public function edit(Request $request, BarbershopServiceConfig $service): Response
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
+
+        $service->load('product:id,name,price');
 
         return Inertia::render('Barbershop::Services/Form', [
-            'service'    => $service,
-            'categories' => BarbershopServiceCategory::active()->orderBy('name')->get(),
+            'config'   => $service,
+            'products' => [],
         ]);
     }
 
-    public function update(Request $request, BarbershopService $service): RedirectResponse
+    public function update(Request $request, BarbershopServiceConfig $service): RedirectResponse
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $request->merge([
-            'category_id' => $request->category_id === '__none__' ? null : $request->category_id,
-        ]);
-
         $data = $request->validate([
-            'category_id'     => ['nullable', 'exists:barbershop_service_categories,id'],
-            'name'            => ['required', 'string', 'max:150'],
-            'description'     => ['nullable', 'string', 'max:1000'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
-            'price'           => ['required', 'numeric', 'min:0'],
-            'commission_rate' => ['required', 'numeric', 'min:0', 'max:100'],
-            'active'          => ['boolean'],
+            'commission_rate'  => ['required', 'numeric', 'min:0', 'max:100'],
+            'active'           => ['boolean'],
         ]);
 
         $service->update($data);
 
-        return back()->with('success', 'Servicio actualizado correctamente.');
+        return redirect()->route('barbershop.services.index')
+            ->with('success', 'Servicio actualizado correctamente.');
     }
 
-    public function destroy(Request $request, BarbershopService $service): RedirectResponse
+    public function destroy(Request $request, BarbershopServiceConfig $service): RedirectResponse
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $name = $service->name;
+        $name = $service->product?->name ?? 'Servicio';
         $service->delete();
 
-        return redirect()->route('barbershop.services.index')
-            ->with('success', "Servicio \"{$name}\" eliminado.");
+        return back()->with('success', "Configuración de \"{$name}\" eliminada.");
     }
 }

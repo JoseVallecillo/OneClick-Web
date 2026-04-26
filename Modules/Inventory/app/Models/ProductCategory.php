@@ -13,6 +13,7 @@ class ProductCategory extends Model
         'account_inventory',
         'account_income',
         'account_cogs',
+        'image_path',
         'active',
     ];
 

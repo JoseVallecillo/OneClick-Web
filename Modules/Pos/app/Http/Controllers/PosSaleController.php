@@ -34,9 +34,9 @@ class PosSaleController extends Controller
 
         $products = Product::where('active', true)
             ->whereIn('type', ['storable', 'service', 'consumable'])
-            ->with(['uom:id,abbreviation', 'category:id,name'])
+            ->with(['uom:id,abbreviation', 'category:id,name,image_path', 'taxRate:id,rate'])
             ->orderBy('name')
-            ->get(['id', 'sku', 'name', 'price', 'uom_id', 'category_id', 'tax_rate_id'])
+            ->get(['id', 'sku', 'name', 'price', 'uom_id', 'category_id', 'tax_rate_id', 'image_path'])
             ->map(function ($product) use ($session) {
                 $stock = $product->type === 'storable'
                     ? $product->stockInWarehouse($session->warehouse_id)

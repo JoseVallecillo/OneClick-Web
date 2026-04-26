@@ -1,6 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { router } from '@inertiajs/react';
+import { Head,  router  } from '@inertiajs/react';
 import { AlertTriangle, Gavel, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
@@ -47,7 +46,8 @@ export default function LoansIndex({ loans, filters, summary }: Props) {
     const filter = () => router.get('/microfinance/loans', { search, status, par }, { preserveState: true, replace: true });
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
+            <Head title="Microfinanzas" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-semibold">Cartera de Créditos</h1>
@@ -148,6 +148,8 @@ export default function LoansIndex({ loans, filters, summary }: Props) {
                     </div>
                 )}
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+LoansIndex.layout = { breadcrumbs };

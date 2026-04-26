@@ -45,6 +45,7 @@ class InventoryConfigController extends Controller
             'account_inventory' => ['nullable', 'string', 'max:50'],
             'account_income'    => ['nullable', 'string', 'max:50'],
             'account_cogs'      => ['nullable', 'string', 'max:50'],
+            'image_path'        => ['nullable', 'string', 'max:500'],
             'active'            => ['boolean'],
         ]);
 
@@ -63,6 +64,7 @@ class InventoryConfigController extends Controller
             'account_inventory' => ['nullable', 'string', 'max:50'],
             'account_income'    => ['nullable', 'string', 'max:50'],
             'account_cogs'      => ['nullable', 'string', 'max:50'],
+            'image_path'        => ['nullable', 'string', 'max:500'],
             'active'            => ['boolean'],
         ]);
 

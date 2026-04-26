@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
+import { Head } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -19,92 +19,109 @@ interface Props {
     as_of_date: string;
 }
 
-const TIER_COLORS: Record<string, { bar: string; badge: string }> = {
-    current: { bar: 'bg-green-500', badge: 'bg-green-100 text-green-700' },
-    par1:    { bar: 'bg-yellow-400', badge: 'bg-yellow-100 text-yellow-700' },
-    par30:   { bar: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700' },
-    par60:   { bar: 'bg-red-500', badge: 'bg-red-100 text-red-700' },
-    par90:   { bar: 'bg-red-800', badge: 'bg-red-200 text-red-900' },
+const TIER_COLORS: Record<string, { bar: string; badge: string; bg: string; text: string }> = {
+    current: { bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700', bg: 'bg-emerald-50', text: 'text-emerald-900' },
+    par1:    { bar: 'bg-amber-400', badge: 'bg-amber-100 text-amber-700', bg: 'bg-amber-50', text: 'text-amber-900' },
+    par30:   { bar: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', bg: 'bg-orange-50', text: 'text-orange-900' },
+    par60:   { bar: 'bg-red-500', badge: 'bg-red-100 text-red-700', bg: 'bg-red-50', text: 'text-red-900' },
+    par90:   { bar: 'bg-rose-800', badge: 'bg-rose-200 text-rose-900', bg: 'bg-rose-50', text: 'text-rose-900' },
 };
 
 export default function ReportsPar({ tiers, totals, as_of_date }: Props) {
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+        <>
+            <Head title="Microfinanzas" />
+            <div className="flex flex-1 flex-col gap-6 p-6 bg-[#f8fafc]">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-xl font-semibold">Informe de Cartera en Riesgo (PaR)</h1>
-                    <p className="text-sm text-gray-400">Al {new Date(as_of_date + 'T12:00:00').toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Informe de Cartera en Riesgo (PaR)</h1>
+                        <p className="text-sm text-slate-500 mt-1">Análisis de mora y cálculo de estimación para cuentas incobrables.</p>
+                    </div>
+                    <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm border border-slate-200">
+                        Al {new Date(as_of_date + 'T12:00:00').toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
                 </div>
 
                 {/* Totals */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border bg-white p-4">
-                        <p className="text-xs text-gray-400">Cartera total</p>
-                        <p className="mt-1 text-2xl font-bold text-gray-800">L.{fmt(totals.total_portfolio)}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="absolute -right-6 -top-6 rounded-full bg-slate-50 p-10">
+                            <div className="h-10 w-10"></div>
+                        </div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Cartera total</p>
+                        <p className="mt-2 text-3xl font-black text-slate-900 relative">L.{fmt(totals.total_portfolio)}</p>
                     </div>
-                    <div className="rounded-lg border bg-white p-4">
-                        <p className="text-xs text-gray-400">Cartera en riesgo (PaR &gt; 0)</p>
-                        <p className="mt-1 text-2xl font-bold text-red-600">L.{fmt(totals.total_par)}</p>
-                        <p className="text-xs text-gray-400">{pct(totals.total_par, totals.total_portfolio)}% del total</p>
+                    <div className="relative overflow-hidden rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-wider text-rose-500">Cartera en riesgo (PaR &gt; 0)</p>
+                        <p className="mt-2 text-3xl font-black text-rose-700 relative">L.{fmt(totals.total_par)}</p>
+                        <div className="mt-4 flex items-center justify-between border-t border-rose-100 pt-3">
+                            <span className="text-xs font-bold text-rose-600">{pct(totals.total_par, totals.total_portfolio)}% del total</span>
+                        </div>
                     </div>
-                    <div className="rounded-lg border bg-white p-4">
-                        <p className="text-xs text-gray-400">Provisión requerida</p>
-                        <p className="mt-1 text-2xl font-bold text-orange-600">L.{fmt(totals.total_provision)}</p>
-                        <p className="text-xs text-gray-400">{pct(totals.total_provision, totals.total_portfolio)}% del total</p>
+                    <div className="relative overflow-hidden rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-wider text-amber-600">Provisión requerida</p>
+                        <p className="mt-2 text-3xl font-black text-amber-800 relative">L.{fmt(totals.total_provision)}</p>
+                        <div className="mt-4 flex items-center justify-between border-t border-amber-100 pt-3">
+                            <span className="text-xs font-bold text-amber-700">{pct(totals.total_provision, totals.total_portfolio)}% del total</span>
+                        </div>
                     </div>
                 </div>
 
                 {/* Tier breakdown */}
-                {tiers.map(tier => {
-                    const colors = TIER_COLORS[tier.category] ?? TIER_COLORS.current;
-                    const barWidth = pct(tier.portfolio_at_risk, totals.total_portfolio);
-                    return (
-                        <div key={tier.category} className="rounded-lg border bg-white">
-                            <div className="border-b p-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <span className={`rounded px-2 py-0.5 text-xs font-bold ${colors.badge}`}>{tier.label}</span>
-                                        <span className="text-sm text-gray-600">{tier.loan_count} crédito{tier.loan_count !== 1 ? 's' : ''}</span>
+                <div className="space-y-6">
+                    {tiers.map(tier => {
+                        const colors = TIER_COLORS[tier.category] ?? TIER_COLORS.current;
+                        const barWidth = pct(tier.portfolio_at_risk, totals.total_portfolio);
+                        return (
+                            <div key={tier.category} className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                <div className={`border-b border-slate-100 p-6 ${colors.bg}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <span className={`rounded-xl px-3 py-1 font-black uppercase tracking-wider text-sm ${colors.badge}`}>{tier.label}</span>
+                                            <span className="font-bold text-slate-700">{tier.loan_count} {tier.loan_count === 1 ? 'crédito' : 'créditos'}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={`text-2xl font-black ${colors.text}`}>L.{fmt(tier.portfolio_at_risk)}</p>
+                                            <p className="mt-1 text-sm font-bold text-slate-500">Provisión ({(tier.provision_rate * 100).toFixed(0)}%): L.{fmt(tier.provision_required)}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold">L.{fmt(tier.portfolio_at_risk)}</p>
-                                        <p className="text-xs text-gray-400">Provisión ({(tier.provision_rate * 100).toFixed(0)}%): L.{fmt(tier.provision_required)}</p>
+                                    <div className="mt-6 flex h-2 w-full overflow-hidden rounded-full bg-white/60">
+                                        <div className={`h-full ${colors.bar} transition-all duration-1000 ease-out`} style={{ width: `${barWidth}%` }} />
                                     </div>
                                 </div>
-                                <div className="mt-2 h-1.5 w-full rounded-full bg-gray-100">
-                                    <div className={`h-1.5 rounded-full ${colors.bar} transition-all`} style={{ width: `${barWidth}%` }} />
-                                </div>
-                            </div>
-                            {tier.loans.length > 0 && (
-                                <div className="max-h-48 overflow-y-auto">
-                                    <table className="w-full text-xs">
-                                        <thead className="border-b bg-gray-50">
-                                            <tr>
-                                                <th className="px-3 py-2 text-left font-medium text-gray-500">Cliente</th>
-                                                <th className="px-3 py-2 text-left font-medium text-gray-500">N° Crédito</th>
-                                                <th className="px-3 py-2 text-center font-medium text-gray-500">Días mora</th>
-                                                <th className="px-3 py-2 text-right font-medium text-gray-500">Saldo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y">
-                                            {tier.loans.map(l => (
-                                                <tr key={l.loan_number}>
-                                                    <td className="px-3 py-1.5">{l.client.first_name} {l.client.last_name}</td>
-                                                    <td className="px-3 py-1.5 font-mono">{l.loan_number}</td>
-                                                    <td className={`px-3 py-1.5 text-center font-bold ${l.days_overdue > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                        {l.days_overdue > 0 ? `+${l.days_overdue}d` : '✓'}
-                                                    </td>
-                                                    <td className="px-3 py-1.5 text-right">L.{fmt(l.principal_balance)}</td>
+                                {tier.loans.length > 0 && (
+                                    <div className="max-h-72 overflow-y-auto bg-white">
+                                        <table className="w-full text-sm">
+                                            <thead className="sticky top-0 bg-white border-b border-slate-100 shadow-sm z-10">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Cliente</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">N° Crédito</th>
+                                                    <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-500">Días mora</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Saldo Principal</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {tier.loans.map(l => (
+                                                    <tr key={l.loan_number} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4 font-bold text-slate-800">{l.client.first_name} {l.client.last_name}</td>
+                                                        <td className="px-6 py-4 font-mono text-slate-500">{l.loan_number}</td>
+                                                        <td className={`px-6 py-4 text-center font-black ${l.days_overdue > 0 ? 'text-rose-600' : 'text-emerald-500'}`}>
+                                                            {l.days_overdue > 0 ? `+${l.days_overdue}d` : '✓ Al día'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right font-bold text-slate-800">L.{fmt(l.principal_balance)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+ReportsPar.layout = { breadcrumbs };

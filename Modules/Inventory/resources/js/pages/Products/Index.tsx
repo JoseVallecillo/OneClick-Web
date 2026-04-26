@@ -31,9 +31,11 @@ interface ProductRow {
     cost: number;
     price: number;
     min_stock: number;
+    image_path: string | null;
     active: boolean;
     category: { id: number; name: string } | null;
     uom: { id: number; name: string; abbreviation: string } | null;
+    tax_rate?: { id: number; name: string; rate: number; type: string } | null;
     total_stock?: number;
     total_reserved?: number;
 }
@@ -104,6 +106,15 @@ function trackingBadge(tracking: ProductRow['tracking']) {
 
 function fmtCurrency(n: number) {
     return new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL', minimumFractionDigits: 2 }).format(n);
+}
+
+function calculateNet(price: any, tax: ProductRow['tax_rate']) {
+    const p = Number(price) || 0;
+    if (!tax || tax.type === 'exempt') return p;
+    const r = Number(tax.rate) || 0;
+    if (tax.type === 'percentage') return p * (1 + r / 100);
+    if (tax.type === 'fixed') return p + r;
+    return p;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -302,6 +313,7 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b text-left text-muted-foreground">
+                                                <th className="pb-2 pr-3 font-medium italic text-[10px] uppercase tracking-wider">Imagen</th>
                                                 <th className="pb-2 pr-3 font-medium">SKU</th>
                                                 <th className="pb-2 pr-3 font-medium">Nombre</th>
                                                 <th className="pb-2 pr-3 font-medium">Categoría</th>
@@ -309,7 +321,8 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                                 <th className="pb-2 pr-3 font-medium">Método</th>
                                                 <th className="pb-2 pr-3 font-medium">UoM</th>
                                                 <th className="pb-2 pr-3 font-medium text-right">Costo</th>
-                                                <th className="pb-2 pr-3 font-medium text-right">Precio</th>
+                                                <th className="pb-2 pr-3 font-medium text-right text-muted-foreground">P. Base</th>
+                                                <th className="pb-2 pr-3 font-medium text-right">P. Neto</th>
                                                 <th className="pb-2 pr-3 font-medium text-right text-muted-foreground">Físico</th>
                                                 <th className="pb-2 pr-3 font-medium text-right text-primary">Disponible</th>
                                                 <th className="pb-2 pr-3 font-medium">Estado</th>
@@ -320,6 +333,15 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                         <tbody>
                                             {data.map((p) => (
                                                 <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                                                    <td className="py-2 pr-3">
+                                                        <div className="h-8 w-8 overflow-hidden rounded-md border bg-muted">
+                                                            {p.image_path ? (
+                                                                <img src={`/storage/${p.image_path}`} alt={p.name} className="h-full w-full object-cover" />
+                                                            ) : (
+                                                                <Package className="h-full w-full p-1.5 opacity-20" />
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                     <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
                                                     <td className="py-2 pr-3">
                                                         <Link
@@ -340,8 +362,9 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                                         {p.valuation === 'average' ? 'Promedio' : 'FIFO'}
                                                     </td>
                                                     <td className="py-2 pr-3 text-xs text-muted-foreground">{p.uom?.abbreviation ?? '—'}</td>
-                                                    <td className="py-2 pr-3 text-right text-xs tabular-nums">{fmtCurrency(p.cost)}</td>
-                                                    <td className="py-2 pr-3 text-right text-xs tabular-nums">{fmtCurrency(p.price)}</td>
+                                                    <td className="py-2 pr-3 text-right text-xs tabular-nums">{fmtCurrency(Number(p.cost))}</td>
+                                                    <td className="py-2 pr-3 text-right text-[10px] tabular-nums text-muted-foreground">{fmtCurrency(Number(p.price))}</td>
+                                                    <td className="py-2 pr-3 text-right text-xs tabular-nums font-bold text-primary">{fmtCurrency(calculateNet(p.price, p.tax_rate))}</td>
                                                     <td className="py-2 pr-3 text-right text-xs tabular-nums text-muted-foreground">
                                                         {p.type === 'service' ? '—' : (p.total_stock ?? 0)}
                                                     </td>

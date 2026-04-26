@@ -32,9 +32,12 @@ interface Product {
     uom_id: number;
     category_id: number | null;
     uom: { abbreviation: string };
-    category: { id: number; name: string } | null;
+    category: { id: number; name: string; image_path: string | null } | null;
     stock: number | null;
+    image_path: string | null;
     type: string;
+    tax_rate_id: number | null;
+    tax_rate?: { id: number; rate: string };
 }
 
 interface Customer { id: number; name: string }
@@ -117,11 +120,13 @@ export default function Sell({ session, products, customers, recentSales }: Prop
 
     // ── Product filtering ───────────────────────────────────────────────────
     const categories = useMemo(() => {
-        const map = new Map<number, string>();
+        const map = new Map<number, { name: string; image_path: string | null }>();
         products.forEach((p) => {
-            if (p.category) map.set(p.category.id, p.category.name);
+            if (p.category) {
+                map.set(p.category.id, { name: p.category.name, image_path: p.category.image_path });
+            }
         });
-        return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+        return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }));
     }, [products]);
 
     const filteredProducts = useMemo(() => {
@@ -146,7 +151,7 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                 product,
                 qty:         1,
                 unit_price:  parseFloat(product.price),
-                tax_rate:    0,
+                tax_rate:    product.tax_rate ? parseFloat(product.tax_rate.rate) : 0,
                 description: '',
             }];
         });
@@ -308,41 +313,131 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                             )}
                         </div>
 
-                        {/* Product grid */}
+                        {/* Catalog area: either Category Grid or Product Grid */}
                         <div className="flex-1 overflow-y-auto p-3">
-                            {filteredProducts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
-                                    <Search className="h-6 w-6 mb-2 opacity-30" />
-                                    No se encontraron productos
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                                    {filteredProducts.map((product) => {
-                                        const stockLow = product.stock !== null && product.stock <= 0;
+                            {!searchQuery.trim() && categoryFilter === '__all__' ? (
+                                /* ── Category Grid ───────────────────────────────── */
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    {categories.map((c, i) => {
+                                        // Simple deterministic color based on index
+                                        const colors = [
+                                            'bg-blue-500/10 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
+                                            'bg-purple-500/10 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300',
+                                            'bg-emerald-500/10 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300',
+                                            'bg-amber-500/10 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
+                                            'bg-rose-500/10 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-300',
+                                            'bg-indigo-500/10 border-indigo-200 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300',
+                                        ];
+                                        const colorClass = colors[i % colors.length];
+
                                         return (
                                             <button
-                                                key={product.id}
-                                                onClick={() => !stockLow && addProduct(product)}
-                                                disabled={stockLow}
-                                                className={`rounded-lg border p-3 text-left transition-all text-sm flex flex-col gap-1 ${
-                                                    stockLow
-                                                        ? 'opacity-40 cursor-not-allowed border-dashed'
-                                                        : 'hover:border-primary hover:bg-primary/5 active:scale-95 cursor-pointer'
-                                                }`}
+                                                key={c.id}
+                                                onClick={() => setCategoryFilter(String(c.id))}
+                                                className={`group relative flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${colorClass}`}
                                             >
-                                                <div className="font-medium text-xs leading-tight line-clamp-2">{product.name}</div>
-                                                <div className="font-mono text-[10px] text-muted-foreground">{product.sku}</div>
-                                                <div className="mt-1 flex items-end justify-between">
-                                                    <span className="text-sm font-bold tabular-nums">{sym} {fmtNum(parseFloat(product.price))}</span>
-                                                    {product.stock !== null && (
-                                                        <span className={`text-[10px] tabular-nums ${product.stock < 5 ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                                                            {fmtNum(product.stock)}
-                                                        </span>
+                                                {c.image_path ? (
+                                                    <img src={`/storage/${c.image_path}`} alt={c.name} className="absolute inset-0 h-full w-full object-cover opacity-30 transition-opacity group-hover:opacity-50" />
+                                                ) : (
+                                                    <div className="absolute -bottom-2 -right-2 h-16 w-16 rounded-full bg-current opacity-[0.05]" />
+                                                )}
+                                                
+                                                <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-background/80 shadow-sm backdrop-blur-sm transition-transform group-hover:scale-110">
+                                                    {c.image_path ? (
+                                                        <img src={`/storage/${c.image_path}`} alt={c.name} className="h-full w-full rounded-full object-cover" />
+                                                    ) : (
+                                                        <ShoppingCart className="h-6 w-6 opacity-70" />
                                                     )}
+                                                </div>
+                                                <div className="relative z-10 font-bold text-sm leading-tight px-3">{c.name}</div>
+                                                <div className="relative z-10 text-[10px] opacity-60">
+                                                    {products.filter(p => p.category_id === c.id).length} productos
                                                 </div>
                                             </button>
                                         );
                                     })}
+                                </div>
+                            ) : (
+                                /* ── Product Grid ────────────────────────────────── */
+                                <div className="space-y-4">
+                                    {/* Sub-header for navigation when in a category */}
+                                    {!searchQuery.trim() && categoryFilter !== '__all__' && (
+                                        <div className="flex items-center justify-between">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCategoryFilter('__all__')}
+                                                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground pl-1"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                                Todas las categorías
+                                            </Button>
+                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                                {categories.find(c => String(c.id) === categoryFilter)?.name}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {filteredProducts.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
+                                            <Search className="h-6 w-6 mb-2 opacity-30" />
+                                            No se encontraron productos
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                            {filteredProducts.map((product) => {
+                                                const stockLow = product.stock !== null && product.stock <= 0;
+                                                return (
+                                                    <button
+                                                        key={product.id}
+                                                        onClick={() => !stockLow && addProduct(product)}
+                                                        disabled={stockLow}
+                                                        className={`group relative rounded-lg border overflow-hidden text-left transition-all text-sm flex flex-col ${
+                                                            stockLow
+                                                                ? 'opacity-40 cursor-not-allowed border-dashed'
+                                                                : 'hover:border-primary hover:bg-primary/5 active:scale-95 cursor-pointer shadow-sm hover:shadow-md'
+                                                        }`}
+                                                    >
+                                                        {/* Product Image */}
+                                                        <div className="aspect-video w-full overflow-hidden bg-muted relative">
+                                                            {product.image_path ? (
+                                                                <img src={`/storage/${product.image_path}`} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center text-muted-foreground/20">
+                                                                    <ShoppingCart className="h-8 w-8" />
+                                                                </div>
+                                                            )}
+                                                            {stockLow && (
+                                                                <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+                                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">Sin stock</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="p-3 flex flex-col gap-1 flex-1">
+                                                            <div className="font-medium text-xs leading-tight line-clamp-2 group-hover:text-primary transition-colors">{product.name}</div>
+                                                            <div className="font-mono text-[10px] text-muted-foreground">{product.sku}</div>
+                                                            <div className="mt-auto pt-2 flex items-end justify-between">
+                                                                <span className="text-sm font-bold tabular-nums text-primary">{sym} {fmtNum(parseFloat(product.price))}</span>
+                                                                {product.stock !== null && (
+                                                                    <span className={`text-[10px] tabular-nums ${product.stock < 5 ? 'text-amber-600 font-bold' : 'text-muted-foreground'}`}>
+                                                                        {fmtNum(product.stock)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Add icon on hover */}
+                                                        {!stockLow && (
+                                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-primary text-primary-foreground rounded-full p-1 shadow-lg">
+                                                                <Plus className="h-3 w-3" />
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

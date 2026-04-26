@@ -49,7 +49,7 @@ class TaxController extends Controller
 
         $tax = Tax::create($data);
 
-        return redirect()->route('accounting.taxes.index')
+        return redirect()->route('accounting.taxes.create')
             ->with('success', "Impuesto {$tax->name} creado.");
     }
 

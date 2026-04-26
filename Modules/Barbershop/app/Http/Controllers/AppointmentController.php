@@ -13,7 +13,7 @@ use Modules\Barbershop\Models\AppointmentProduct;
 use Modules\Barbershop\Models\AppointmentService;
 use Modules\Barbershop\Models\Barber;
 use Modules\Barbershop\Models\BarbershopClientProfile;
-use Modules\Barbershop\Models\BarbershopService;
+use Modules\Barbershop\Models\BarbershopServiceConfig;
 use Modules\Contacts\Models\Contact;
 use Modules\Inventory\Models\Product;
 
@@ -67,7 +67,7 @@ class AppointmentController extends Controller
         return Inertia::render('Barbershop::Appointments/Form', [
             'appointment' => null,
             'barbers'     => Barber::active()->with('schedules')->orderBy('name')->get(),
-            'services'    => BarbershopService::active()->with('category')->orderBy('name')->get(),
+            'services'    => BarbershopServiceConfig::where('active', true)->with('product:id,name,price')->get()->map(fn ($cfg) => ['id' => $cfg->product_id, 'name' => $cfg->product->name, 'price' => (float) $cfg->product->price, 'duration_minutes' => $cfg->duration_minutes, 'category' => null]),
             'clients'     => Contact::where('is_client', true)->where('active', true)->with('barbershopProfile')->orderBy('name')->get(['id', 'name', 'phone', 'mobile']),
             'products'    => Product::where('active', true)->orderBy('name')->get(['id', 'name', 'price']),
             'defaultDate' => $request->input('date', today()->toDateString()),
@@ -95,7 +95,7 @@ class AppointmentController extends Controller
             'payment_method'   => ['nullable', 'string', 'max:30'],
             'payment_status'   => ['required', 'in:pending,paid,partial,refunded'],
             'services'         => ['nullable', 'array'],
-            'services.*.service_id'       => ['nullable', 'exists:barbershop_services,id'],
+            'services.*.service_id'       => ['nullable', 'exists:products,id'],
             'services.*.service_name'     => ['required_with:services', 'string', 'max:150'],
             'services.*.duration_minutes' => ['required_with:services', 'integer', 'min:1'],
             'services.*.price'            => ['required_with:services', 'numeric', 'min:0'],
@@ -193,7 +193,7 @@ class AppointmentController extends Controller
         return Inertia::render('Barbershop::Appointments/Form', [
             'appointment' => $appointment,
             'barbers'     => Barber::active()->with('schedules')->orderBy('name')->get(),
-            'services'    => BarbershopService::active()->with('category')->orderBy('name')->get(),
+            'services'    => BarbershopServiceConfig::where('active', true)->with('product:id,name,price')->get()->map(fn ($cfg) => ['id' => $cfg->product_id, 'name' => $cfg->product->name, 'price' => (float) $cfg->product->price, 'duration_minutes' => $cfg->duration_minutes, 'category' => null]),
             'clients'     => Contact::where('is_client', true)->where('active', true)->with('barbershopProfile')->orderBy('name')->get(['id', 'name', 'phone', 'mobile']),
             'products'    => Product::where('active', true)->orderBy('name')->get(['id', 'name', 'price']),
             'defaultDate' => $appointment->appointment_date->toDateString(),
@@ -221,7 +221,7 @@ class AppointmentController extends Controller
             'payment_method'   => ['nullable', 'string', 'max:30'],
             'payment_status'   => ['required', 'in:pending,paid,partial,refunded'],
             'services'         => ['nullable', 'array'],
-            'services.*.service_id'       => ['nullable', 'exists:barbershop_services,id'],
+            'services.*.service_id'       => ['nullable', 'exists:products,id'],
             'services.*.service_name'     => ['required_with:services', 'string', 'max:150'],
             'services.*.duration_minutes' => ['required_with:services', 'integer', 'min:1'],
             'services.*.price'            => ['required_with:services', 'numeric', 'min:0'],

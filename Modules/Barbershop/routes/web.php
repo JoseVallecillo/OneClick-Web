@@ -62,7 +62,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // ── Configuración ─────────────────────────────────────────────────────────
     Route::get('barbershop/config',                              [BarbershopConfigController::class, 'index'])->name('barbershop.config');
-    Route::post('barbershop/config/categories',                  [BarbershopConfigController::class, 'storeCategory'])->name('barbershop.categories.store');
-    Route::patch('barbershop/config/categories/{category}',      [BarbershopConfigController::class, 'updateCategory'])->name('barbershop.categories.update');
-    Route::delete('barbershop/config/categories/{category}',     [BarbershopConfigController::class, 'destroyCategory'])->name('barbershop.categories.destroy');
 });

@@ -369,22 +369,30 @@ export default function MovementForm({ warehouses, products, type }: Props) {
                                                     </td>
                                                     <td className="py-2 pr-3">
                                                         <Input
-                                                            type="number"
-                                                            step="0.001"
-                                                            min="0.001"
+                                                            type="text"
+                                                            inputMode="decimal"
                                                             value={line.qty}
-                                                            onChange={(e) => updateLine(index, 'qty', e.target.value)}
-                                                            className="w-full text-right tabular-nums h-9"
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                                                                    updateLine(index, 'qty', val);
+                                                                }
+                                                            }}
+                                                            className="w-full text-right tabular-nums h-9 font-mono"
                                                         />
                                                     </td>
                                                     <td className="py-2 pr-3">
                                                         <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
+                                                            type="text"
+                                                            inputMode="decimal"
                                                             value={line.unit_cost}
-                                                            onChange={(e) => updateLine(index, 'unit_cost', e.target.value)}
-                                                            className="w-full text-right tabular-nums h-9"
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                                                                    updateLine(index, 'unit_cost', val);
+                                                                }
+                                                            }}
+                                                            className="w-full text-right tabular-nums h-9 font-mono"
                                                         />
                                                     </td>
                                                     <td className="py-2 pr-3 text-right tabular-nums text-xs font-medium">

@@ -4,7 +4,9 @@
     "authors": [],
     "extra": {
         "laravel": {
-            "providers": []
+            "providers": [
+                "Modules\\Microfinance\\app\\Providers\\MicrofinanceServiceProvider"
+            ]
         }
     },
     "autoload": {

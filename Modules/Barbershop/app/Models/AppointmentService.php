@@ -4,6 +4,7 @@ namespace Modules\Barbershop\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Inventory\Models\Product;
 
 class AppointmentService extends Model
 {
@@ -28,6 +29,6 @@ class AppointmentService extends Model
 
     public function service(): BelongsTo
     {
-        return $this->belongsTo(BarbershopService::class, 'service_id');
+        return $this->belongsTo(Product::class, 'service_id');
     }
 }
