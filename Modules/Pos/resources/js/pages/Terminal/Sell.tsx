@@ -104,6 +104,14 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     const flash = props.flash;
     const sym = session.currency.symbol;
 
+    const [flashVisible, setFlashVisible] = useState(!!flash?.success);
+    useEffect(() => {
+        if (!flash?.success) return;
+        setFlashVisible(true);
+        const t = setTimeout(() => setFlashVisible(false), 3000);
+        return () => clearTimeout(t);
+    }, [flash?.success]);
+
     // ── Cart state ──────────────────────────────────────────────────────────
     const [cart, setCart]             = useState<CartLine[]>([]);
     const [customerId, setCustomerId] = useState<string>('__walk_in__');
@@ -242,7 +250,7 @@ export default function Sell({ session, products, customers, recentSales }: Prop
         <>
             <Head title={`POS — ${session.reference}`} />
 
-            {flash?.success && (
+            {flash?.success && flashVisible && (
                 <div className="fixed top-4 right-4 z-50 max-w-sm rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg dark:border-green-800 dark:bg-green-950 dark:text-green-300">
                     {flash.success}
                 </div>
@@ -495,7 +503,7 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                     {cart.map((line, idx) => {
                                         const { total } = calcLine(line);
                                         return (
-                                            <div key={idx} className="rounded-lg border bg-background p-2">
+                                            <div key={line.product_id} className="rounded-lg border bg-background p-2">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs font-medium leading-tight truncate">{line.product.name}</p>

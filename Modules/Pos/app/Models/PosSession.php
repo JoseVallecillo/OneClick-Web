@@ -81,6 +81,7 @@ class PosSession extends Model
 
     /**
      * Generate the next sequential reference in the format TP-YYYY-NNNN.
+     * Uses a lock to prevent race conditions under concurrent requests.
      */
     public static function generateReference(): string
     {
@@ -88,28 +89,38 @@ class PosSession extends Model
         $prefix = "TP-{$year}-";
 
         $last = static::where('reference', 'like', $prefix . '%')
-            ->orderByDesc('reference')
+            ->lockForUpdate()
+            ->orderByRaw('CAST(SUBSTRING(reference, ?) AS UNSIGNED) DESC', [strlen($prefix) + 1])
             ->value('reference');
 
-        $next = $last ? ((int) substr($last, -4)) + 1 : 1;
+        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
         return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Recompute running totals from completed sales.
+     * Recompute running totals from completed sales using a single query.
      * Called after each sale or void.
      */
     public function recalculateTotals(): void
     {
-        $completed = $this->sales()->where('status', 'completed');
+        $row = $this->sales()
+            ->selectRaw("
+                COUNT(CASE WHEN status = 'completed' THEN 1 END)                                   AS sales_count,
+                COUNT(CASE WHEN status = 'voided'    THEN 1 END)                                   AS voided_count,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN total            ELSE 0 END), 0)  AS total_sales,
+                COALESCE(SUM(CASE WHEN status = 'completed' AND payment_method = 'cash'     THEN total ELSE 0 END), 0) AS total_cash,
+                COALESCE(SUM(CASE WHEN status = 'completed' AND payment_method = 'card'     THEN total ELSE 0 END), 0) AS total_card,
+                COALESCE(SUM(CASE WHEN status = 'completed' AND payment_method = 'transfer' THEN total ELSE 0 END), 0) AS total_transfer
+            ")
+            ->first();
 
-        $this->total_sales    = $completed->sum('total');
-        $this->total_cash     = $completed->where('payment_method', 'cash')->sum('total');
-        $this->total_card     = $completed->where('payment_method', 'card')->sum('total');
-        $this->total_transfer = $completed->where('payment_method', 'transfer')->sum('total');
-        $this->sales_count    = $completed->count();
-        $this->voided_count   = $this->sales()->where('status', 'voided')->count();
+        $this->sales_count    = (int) $row->sales_count;
+        $this->voided_count   = (int) $row->voided_count;
+        $this->total_sales    = $row->total_sales;
+        $this->total_cash     = $row->total_cash;
+        $this->total_card     = $row->total_card;
+        $this->total_transfer = $row->total_transfer;
         $this->save();
     }
 

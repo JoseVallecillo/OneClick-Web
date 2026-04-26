@@ -92,6 +92,7 @@ class PosSale extends Model
 
     /**
      * Generate the next sequential reference in the format RV-YYYY-NNNN.
+     * Uses a lock to prevent race conditions under concurrent requests.
      */
     public static function generateReference(): string
     {
@@ -99,10 +100,11 @@ class PosSale extends Model
         $prefix = "RV-{$year}-";
 
         $last = static::where('reference', 'like', $prefix . '%')
-            ->orderByDesc('reference')
+            ->lockForUpdate()
+            ->orderByRaw('CAST(SUBSTRING(reference, ?) AS UNSIGNED) DESC', [strlen($prefix) + 1])
             ->value('reference');
 
-        $next = $last ? ((int) substr($last, -4)) + 1 : 1;
+        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
         return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
     }

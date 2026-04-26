@@ -36,13 +36,27 @@ class PosSaleController extends Controller
             ->whereIn('type', ['storable', 'service', 'consumable'])
             ->with(['uom:id,abbreviation', 'category:id,name,image_path', 'taxRate:id,rate'])
             ->orderBy('name')
-            ->get(['id', 'sku', 'name', 'price', 'uom_id', 'category_id', 'tax_rate_id', 'image_path'])
-            ->map(function ($product) use ($session) {
-                $stock = $product->type === 'storable'
-                    ? $product->stockInWarehouse($session->warehouse_id)
-                    : null;
-                return array_merge($product->toArray(), ['stock' => $stock]);
-            });
+            ->get(['id', 'sku', 'name', 'price', 'type', 'uom_id', 'category_id', 'tax_rate_id', 'image_path']);
+
+        // Batch-load stock quantities for all storable products in a single query
+        $storableIds = $products->where('type', 'storable')->pluck('id')->all();
+        $stockMap    = [];
+        if ($storableIds) {
+            $stockMap = DB::table('stock_quantities')
+                ->where('warehouse_id', $session->warehouse_id)
+                ->whereIn('product_id', $storableIds)
+                ->get(['product_id', 'quantity', 'reserved_quantity'])
+                ->keyBy('product_id')
+                ->map(fn ($r) => max(0, (float) $r->quantity - (float) $r->reserved_quantity))
+                ->all();
+        }
+
+        $products = $products->map(function ($product) use ($stockMap) {
+            $stock = $product->type === 'storable'
+                ? ($stockMap[$product->id] ?? 0.0)
+                : null;
+            return array_merge($product->toArray(), ['stock' => $stock]);
+        });
 
         $customers = Contact::where('is_client', true)
             ->where('active', true)
@@ -77,11 +91,11 @@ class PosSaleController extends Controller
         abort_if($session->isClosed(), 403, 'Esta sesión está cerrada.');
 
         $data = $request->validate([
-            'customer_id'    => ['nullable', 'exists:contacts,id'],
-            'payment_method' => ['required', 'in:cash,card,transfer'],
+            'customer_id'     => ['nullable', 'exists:contacts,id'],
+            'payment_method'  => ['required', 'in:cash,card,transfer'],
             'amount_tendered' => ['required', 'numeric', 'min:0'],
-            'notes'          => ['nullable', 'string', 'max:500'],
-            'lines'          => ['required', 'array', 'min:1'],
+            'notes'           => ['nullable', 'string', 'max:500'],
+            'lines'           => ['required', 'array', 'min:1'],
             'lines.*.product_id'  => ['required', 'exists:products,id'],
             'lines.*.qty'         => ['required', 'numeric', 'min:0.01'],
             'lines.*.unit_price'  => ['required', 'numeric', 'min:0'],
@@ -89,7 +103,23 @@ class PosSaleController extends Controller
             'lines.*.description' => ['nullable', 'string', 'max:500'],
         ]);
 
+        // For cash payments the tendered amount must cover the total
+        if ($data['payment_method'] === 'cash') {
+            $lineTotal = collect($data['lines'])->sum(function ($l) {
+                $sub = (float) $l['qty'] * (float) $l['unit_price'];
+                return round($sub + $sub * ((float) $l['tax_rate'] / 100), 4);
+            });
+
+            if ((float) $data['amount_tendered'] < $lineTotal) {
+                return back()->withErrors(['amount_tendered' => 'El monto recibido no cubre el total de la venta.'])->withInput();
+            }
+        }
+
         $sale = DB::transaction(function () use ($session, $data) {
+            // Pre-load all products in a single query to avoid N+1
+            $productIds = collect($data['lines'])->pluck('product_id')->unique()->all();
+            $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
             // 1. Calculate totals
             $subtotal  = 0;
             $taxAmount = 0;
@@ -109,19 +139,19 @@ class PosSaleController extends Controller
 
             // 2. Create the PosSale
             $sale = PosSale::create([
-                'reference'      => PosSale::generateReference(),
-                'pos_session_id' => $session->id,
-                'customer_id'    => $data['customer_id'] ?? null,
-                'currency_id'    => $session->currency_id,
-                'status'         => 'completed',
-                'payment_method' => $data['payment_method'],
+                'reference'       => PosSale::generateReference(),
+                'pos_session_id'  => $session->id,
+                'customer_id'     => $data['customer_id'] ?? null,
+                'currency_id'     => $session->currency_id,
+                'status'          => 'completed',
+                'payment_method'  => $data['payment_method'],
                 'amount_tendered' => $tendered,
-                'change_given'   => $changeGiven,
-                'subtotal'       => $subtotal,
-                'tax_amount'     => $taxAmount,
-                'total'          => $total,
-                'notes'          => $data['notes'] ?? null,
-                'created_by'     => Auth::id(),
+                'change_given'    => $changeGiven,
+                'subtotal'        => $subtotal,
+                'tax_amount'      => $taxAmount,
+                'total'           => $total,
+                'notes'           => $data['notes'] ?? null,
+                'created_by'      => Auth::id(),
             ]);
 
             // 3. Create sale lines
@@ -139,10 +169,9 @@ class PosSaleController extends Controller
             }
 
             // 4. Create stock move (out) and process it
-            $storableLines = collect($data['lines'])->filter(function ($l) {
-                $product = Product::find($l['product_id']);
-                return $product && $product->type === 'storable';
-            });
+            $storableLines = collect($data['lines'])->filter(
+                fn ($l) => isset($products[$l['product_id']]) && $products[$l['product_id']]->type === 'storable'
+            );
 
             if ($storableLines->isNotEmpty()) {
                 $move = StockMove::create([
@@ -156,7 +185,7 @@ class PosSaleController extends Controller
                 ]);
 
                 foreach ($storableLines as $l) {
-                    $product = Product::find($l['product_id']);
+                    $product = $products[$l['product_id']];
                     StockMoveLine::create([
                         'stock_move_id' => $move->id,
                         'product_id'    => $l['product_id'],
@@ -213,6 +242,8 @@ class PosSaleController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
+        $sale->loadMissing(['session', 'lines.product']);
+
         abort_if($sale->isVoided(), 403, 'Esta venta ya está anulada.');
         abort_if($sale->session->isClosed(), 403, 'No se puede anular una venta de una sesión cerrada.');
 
@@ -230,14 +261,13 @@ class PosSaleController extends Controller
                 ]);
 
                 foreach ($sale->lines as $line) {
-                    $product = Product::find($line->product_id);
-                    if ($product && $product->type === 'storable') {
+                    if ($line->product && $line->product->type === 'storable') {
                         StockMoveLine::create([
                             'stock_move_id' => $returnMove->id,
                             'product_id'    => $line->product_id,
                             'lot_id'        => null,
                             'qty'           => $line->qty,
-                            'unit_cost'     => $product->cost ?? 0,
+                            'unit_cost'     => $line->product->cost ?? 0,
                         ]);
                     }
                 }

@@ -55,8 +55,12 @@ interface Table {
     status: 'available' | 'occupied' | 'pending_food';
     server_name: string | null;
     time_open: string | null;
-    total: string;
+    total: number;
     current_sale_id: number | null;
+}
+
+function fmtTotal(v: number) {
+    return v.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 interface Props {
@@ -432,7 +436,7 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
                         {table.status === 'occupied' && (
                             <>
                                 <span style={{ color: C.red, fontSize: 11, fontWeight: 600 }}>{table.time_open ?? '—'}</span>
-                                <span style={{ color: C.text, fontSize: 10, fontWeight: 700 }}>{table.total}</span>
+                                <span style={{ color: C.text, fontSize: 10, fontWeight: 700 }}>{fmtTotal(table.total)}</span>
                                 <span style={{ color: C.muted, fontSize: 9, maxWidth: 100, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {table.server_name ?? '—'}
                                 </span>
@@ -516,7 +520,7 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
             {table.status === 'occupied' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, position: 'relative' }}>
                     <InfoRow icon={<Clock size={12} color={C.red} />} label="Tiempo" value={table.time_open ?? '—'} valueColor={C.red} />
-                    <InfoRow icon={<span style={{ fontSize: 11, color: C.teal, fontWeight: 700 }}>L.</span>} label="Total" value={table.total} valueColor={C.text} bold />
+                    <InfoRow icon={<span style={{ fontSize: 11, color: C.teal, fontWeight: 700 }}>L.</span>} label="Total" value={fmtTotal(table.total)} valueColor={C.text} bold />
                     <InfoRow icon={<Users size={12} color={C.muted} />} label="Mesero" value={table.server_name ?? '—'} valueColor={C.muted} />
 
                     <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
@@ -532,7 +536,7 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
                         <ChefHat size={22} color={C.amber} />
                         <div>
                             <div style={{ color: C.amber, fontSize: 13, fontWeight: 700 }}>Esperando comida</div>
-                            <div style={{ color: C.muted, fontSize: 11 }}>{table.time_open ?? '—'} · {table.total}</div>
+                            <div style={{ color: C.muted, fontSize: 11 }}>{table.time_open ?? '—'} · {fmtTotal(table.total)}</div>
                         </div>
                     </div>
                     <InfoRow icon={<Users size={12} color={C.muted} />} label="Mesero" value={table.server_name ?? '—'} valueColor={C.muted} />

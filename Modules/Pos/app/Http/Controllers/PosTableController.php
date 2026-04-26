@@ -30,7 +30,7 @@ class PosTableController extends Controller
                 'status'          => $t->status,
                 'server_name'     => $t->server_name,
                 'time_open'       => $t->timeOpen(),
-                'total'           => $t->total ? 'L. ' . number_format((float) $t->total, 2) : 'L. 0.00',
+                'total'           => (float) ($t->total ?? 0),
                 'current_sale_id' => $t->current_sale_id,
             ]);
 
@@ -55,7 +55,10 @@ class PosTableController extends Controller
 
     public function openTable(Request $request, PosTable $table): RedirectResponse
     {
-        $session = PosSession::where('status', 'open')->orderByDesc('id')->first();
+        $session = PosSession::where('status', 'open')
+            ->when($table->pos_session_id, fn ($q) => $q->where('id', $table->pos_session_id))
+            ->orderByDesc('id')
+            ->first();
 
         if (!$session) {
             return redirect()->route('pos.sessions.open')
@@ -87,6 +90,10 @@ class PosTableController extends Controller
 
     public function closeTable(PosTable $table): RedirectResponse
     {
+        if ($table->current_sale_id) {
+            return back()->with('error', 'La mesa tiene una venta activa. Finaliza la venta antes de cerrar la mesa.');
+        }
+
         $table->update([
             'status'          => 'available',
             'server_name'     => null,
