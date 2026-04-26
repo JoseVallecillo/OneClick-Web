@@ -4,6 +4,7 @@ namespace Modules\Pos\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PosTable extends Model
 {
@@ -18,6 +19,8 @@ class PosTable extends Model
         'total',
         'pos_session_id',
         'current_sale_id',
+        'current_order_id',
+        'pos_waiter_id',
     ];
 
     protected $casts = [
@@ -29,6 +32,16 @@ class PosTable extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(PosSession::class, 'pos_session_id');
+    }
+
+    public function currentOrder(): BelongsTo
+    {
+        return $this->belongsTo(PosOrder::class, 'current_order_id');
+    }
+
+    public function waiter(): BelongsTo
+    {
+        return $this->belongsTo(PosWaiter::class, 'pos_waiter_id');
     }
 
     public function timeOpen(): ?string

@@ -5,10 +5,12 @@ import {
     Clock,
     CreditCard,
     LayoutGrid,
+    Pencil,
     Plus,
     Receipt,
     RefreshCw,
     Search,
+    Settings,
     Users,
     UtensilsCrossed,
     X,
@@ -54,10 +56,14 @@ interface Table {
     capacity: number;
     status: 'available' | 'occupied' | 'pending_food';
     server_name: string | null;
+    waiter_name: string | null;
     time_open: string | null;
     total: number;
     current_sale_id: number | null;
+    current_order_id: number | null;
 }
+
+interface Waiter { id: number; name: string; code: string | null }
 
 function fmtTotal(v: number) {
     return v.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -68,6 +74,7 @@ interface Props {
     sections: string[];
     activeSection: string;
     activeSession: { id: number; reference: string } | null;
+    waiters: Waiter[];
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -263,6 +270,28 @@ function Header({ stats, search, onSearchChange, activeSection, sections, onSect
                 <RefreshCw size={14} />
             </button>
 
+            {/* Admin links */}
+            <Link href="/pos/tables/create" style={{ textDecoration: 'none' }}>
+                <button title="Agregar mesa" style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    background: C.card, border: `1px solid ${C.borderMid}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: C.faint,
+                }}>
+                    <Plus size={14} />
+                </button>
+            </Link>
+            <Link href="/pos/waiters" style={{ textDecoration: 'none' }}>
+                <button title="Gestionar meseros" style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    background: C.card, border: `1px solid ${C.borderMid}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: C.faint,
+                }}>
+                    <Users size={14} />
+                </button>
+            </Link>
+
             {/* New Order */}
             {activeSession ? (
                 <Link href={`/pos/sessions/${activeSession.id}/sell`} style={{ textDecoration: 'none' }}>
@@ -319,11 +348,13 @@ function StatPill({ label, value, color }: { label: string; value: number; color
 interface TableCardProps {
     table: Table;
     sessionId: number | null;
+    waiters: Waiter[];
     onStatusChange: (id: number, status: Table['status']) => void;
 }
 
-function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
+function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps) {
     const [hovered, setHovered] = useState(false);
+    const [selectedWaiter, setSelectedWaiter] = useState('');
     const ring = STATUS_RING[table.status];
     const isCircle = table.shape === 'circle';
 
@@ -362,7 +393,16 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
             router.visit('/pos/sessions/open');
             return;
         }
-        router.post(`/pos/tables/${table.id}/open`, {}, { preserveScroll: true });
+        router.post(`/pos/tables/${table.id}/open`, {
+            waiter_id: selectedWaiter || null,
+        });
+    };
+
+    const handleGoToOrder = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (table.current_order_id) {
+            router.visit(`/pos/orders/${table.current_order_id}`);
+        }
     };
 
     const handleMarkKitchen = (e: React.MouseEvent) => {
@@ -488,16 +528,24 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
 
             {/* Body */}
             {table.status === 'available' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {/* Table shape illustration */}
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 44 }}>
-                        <div style={{
-                            width: 52, height: 36,
-                            borderRadius: 6,
-                            border: `1.5px dashed ${C.teal}`,
-                            opacity: 0.35,
-                        }} />
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Waiter selector */}
+                    {waiters.length > 0 && (
+                        <select
+                            value={selectedWaiter}
+                            onChange={e => { e.stopPropagation(); setSelectedWaiter(e.target.value); }}
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                width: '100%', height: 28, borderRadius: 6,
+                                background: C.card, border: `1px solid ${C.borderMid}`,
+                                color: C.text, fontSize: 11, padding: '0 8px',
+                                outline: 'none', cursor: 'pointer',
+                            }}
+                        >
+                            <option value="">Sin mesero</option>
+                            {waiters.map(w => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
+                        </select>
+                    )}
                     <button
                         onClick={handleOpenTable}
                         style={{
@@ -514,6 +562,16 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
                         <Plus size={13} />
                         Abrir Mesa
                     </button>
+                    {/* Edit table link */}
+                    <a href={`/pos/tables/${table.id}/edit`}
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                            color: C.faint, fontSize: 10, textDecoration: 'none',
+                            marginTop: -2,
+                        }}>
+                        <Pencil size={10} /> Editar mesa
+                    </a>
                 </div>
             )}
 
@@ -521,9 +579,12 @@ function TableCard({ table, sessionId, onStatusChange }: TableCardProps) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7, position: 'relative' }}>
                     <InfoRow icon={<Clock size={12} color={C.red} />} label="Tiempo" value={table.time_open ?? '—'} valueColor={C.red} />
                     <InfoRow icon={<span style={{ fontSize: 11, color: C.teal, fontWeight: 700 }}>L.</span>} label="Total" value={fmtTotal(table.total)} valueColor={C.text} bold />
-                    <InfoRow icon={<Users size={12} color={C.muted} />} label="Mesero" value={table.server_name ?? '—'} valueColor={C.muted} />
+                    <InfoRow icon={<Users size={12} color={C.muted} />} label="Mesero" value={table.waiter_name ?? table.server_name ?? '—'} valueColor={C.muted} />
 
                     <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                        {table.current_order_id && (
+                            <ActionBtn label="Ver Orden" color={C.teal} onClick={handleGoToOrder} />
+                        )}
                         <ActionBtn label="En Cocina" color={C.amber} onClick={handleMarkKitchen} />
                         <ActionBtn label="Liberar" color={C.red} onClick={handleRelease} />
                     </div>
@@ -600,15 +661,15 @@ function ActionBtn({ label, color, onClick }: { label: string; color: string; on
 }
 
 // ── Section Group ─────────────────────────────────────────────────────────────
-function SectionGroup({ name, tables, sessionId, onStatusChange }: {
+function SectionGroup({ name, tables, sessionId, waiters, onStatusChange }: {
     name: string;
     tables: Table[];
     sessionId: number | null;
+    waiters: Waiter[];
     onStatusChange: (id: number, status: Table['status']) => void;
 }) {
     return (
         <div style={{ marginBottom: 36 }}>
-            {/* Section header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <span style={{ color: C.text, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                     {name}
@@ -626,7 +687,6 @@ function SectionGroup({ name, tables, sessionId, onStatusChange }: {
                 </span>
             </div>
 
-            {/* Table grid */}
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
@@ -638,6 +698,7 @@ function SectionGroup({ name, tables, sessionId, onStatusChange }: {
                         key={table.id}
                         table={table}
                         sessionId={sessionId}
+                        waiters={waiters}
                         onStatusChange={onStatusChange}
                     />
                 ))}
@@ -677,7 +738,7 @@ function NoSessionBanner() {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function TableBoard({ tables: initialTables, sections, activeSection: initialSection, activeSession }: Props) {
+export default function TableBoard({ tables: initialTables, sections, activeSection: initialSection, activeSession, waiters }: Props) {
     const [search, setSearch] = useState('');
     const [activeSection, setActiveSection] = useState(initialSection);
     const [tables, setTables] = useState(initialTables);
@@ -776,6 +837,7 @@ export default function TableBoard({ tables: initialTables, sections, activeSect
                                     name={sectionName}
                                     tables={sectionTables}
                                     sessionId={activeSession?.id ?? null}
+                                    waiters={waiters}
                                     onStatusChange={handleStatusChange}
                                 />
                             ))
