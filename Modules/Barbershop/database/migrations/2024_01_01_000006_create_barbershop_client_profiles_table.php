@@ -8,25 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('barbershop_clients', function (Blueprint $table) {
+        Schema::create('barbershop_client_profiles', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 150);
-            $table->string('phone', 30)->nullable();
-            $table->string('email', 150)->nullable();
-            $table->date('birthdate')->nullable();
-            $table->string('preferred_style', 200)->nullable();
-            $table->text('notes')->nullable();
+            $table->foreignId('contact_id')->unique()->constrained('contacts')->cascadeOnDelete();
             $table->foreignId('preferred_barber_id')->nullable()->constrained('barbers')->nullOnDelete();
+            $table->string('preferred_style', 200)->nullable();
             $table->unsignedInteger('total_visits')->default(0);
             $table->decimal('total_spent', 12, 2)->default(0);
             $table->timestamp('last_visit_at')->nullable();
-            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('barbershop_clients');
+        Schema::dropIfExists('barbershop_client_profiles');
     }
 };

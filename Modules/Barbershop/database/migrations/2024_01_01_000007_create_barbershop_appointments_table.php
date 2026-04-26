@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('barbershop_appointments', function (Blueprint $table) {
             $table->id();
             $table->string('reference', 20)->unique();
-            $table->foreignId('client_id')->nullable()->constrained('barbershop_clients')->nullOnDelete();
+            $table->foreignId('client_id')->nullable()->constrained('contacts')->nullOnDelete();
             $table->string('client_name', 150);
             $table->string('client_phone', 30)->nullable();
             $table->foreignId('barber_id')->nullable()->constrained('barbers')->nullOnDelete();

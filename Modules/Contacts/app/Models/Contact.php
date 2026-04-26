@@ -4,6 +4,7 @@ namespace Modules\Contacts\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Contact extends Model
 {
@@ -41,5 +42,10 @@ class Contact extends Model
     public function persons(): HasMany
     {
         return $this->hasMany(ContactPerson::class)->orderBy('name');
+    }
+
+    public function barbershopProfile(): HasOne
+    {
+        return $this->hasOne(\Modules\Barbershop\Models\BarbershopClientProfile::class, 'contact_id');
     }
 }

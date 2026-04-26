@@ -5,20 +5,41 @@ import { dashboard } from '@/routes';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Calendar, Clock, Mail, Phone, Scissors, Star, User } from 'lucide-react';
 
-interface ClientDetail {
-    id: number; name: string; phone: string | null; email: string | null;
-    birthdate: string | null; preferred_style: string | null; notes: string | null;
-    active: boolean; total_visits: number; total_spent: number; last_visit_at: string | null;
+interface BarbershopProfile {
+    preferred_barber_id: number | null;
+    preferred_style: string | null;
+    total_visits: number;
+    total_spent: number;
+    last_visit_at: string | null;
     preferred_barber: { id: number; name: string } | null;
-    appointments: {
-        id: number; reference: string; appointment_date: string; start_time: string;
-        status: string; total: number;
-        barber: { id: number; name: string; color: string } | null;
-        services: { service_name: string }[];
-    }[];
 }
 
-interface Props { client: ClientDetail; }
+interface ContactDetail {
+    id: number;
+    name: string;
+    phone: string | null;
+    mobile: string | null;
+    email: string | null;
+    notes: string | null;
+    active: boolean;
+    barbershop_profile: BarbershopProfile | null;
+}
+
+interface AppointmentRow {
+    id: number;
+    reference: string;
+    appointment_date: string;
+    start_time: string;
+    status: string;
+    total: number;
+    barber: { id: number; name: string; color: string } | null;
+    services: { service_name: string }[];
+}
+
+interface Props {
+    client: ContactDetail;
+    appointments: AppointmentRow[];
+}
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
     pending:     { label: 'Pendiente',   variant: 'outline'     },
@@ -38,7 +59,9 @@ function fmtDate(d: string | null) {
     return new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function ClientShow({ client }: Props) {
+export default function ClientShow({ client, appointments }: Props) {
+    const profile = client.barbershop_profile;
+
     return (
         <>
             <Head title={`Cliente: ${client.name}`} />
@@ -58,7 +81,7 @@ export default function ClientShow({ client }: Props) {
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-3">
-                    {/* Stats */}
+                    {/* Contact info + stats */}
                     <div className="lg:col-span-1 flex flex-col gap-6">
                         <Card>
                             <CardContent className="pt-6">
@@ -74,10 +97,10 @@ export default function ClientShow({ client }: Props) {
                                     </div>
 
                                     <div className="space-y-2 border-t pt-3">
-                                        {client.phone && (
+                                        {(client.phone || client.mobile) && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                                <span>{client.phone}</span>
+                                                <span>{client.phone ?? client.mobile}</span>
                                             </div>
                                         )}
                                         {client.email && (
@@ -86,22 +109,16 @@ export default function ClientShow({ client }: Props) {
                                                 <span>{client.email}</span>
                                             </div>
                                         )}
-                                        {client.birthdate && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                                <span>{fmtDate(client.birthdate)}</span>
-                                            </div>
-                                        )}
-                                        {client.preferred_barber && (
+                                        {profile?.preferred_barber && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Scissors className="h-3.5 w-3.5 text-muted-foreground" />
-                                                <span>Barbero: <Link href={`/barbershop/barbers/${client.preferred_barber.id}`} className="hover:text-primary hover:underline">{client.preferred_barber.name}</Link></span>
+                                                <span>Barbero: <Link href={`/barbershop/barbers/${profile.preferred_barber.id}`} className="hover:text-primary hover:underline">{profile.preferred_barber.name}</Link></span>
                                             </div>
                                         )}
-                                        {client.preferred_style && (
+                                        {profile?.preferred_style && (
                                             <div className="flex items-start gap-2 text-sm">
                                                 <Star className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
-                                                <span>{client.preferred_style}</span>
+                                                <span>{profile.preferred_style}</span>
                                             </div>
                                         )}
                                         {client.notes && (
@@ -112,26 +129,25 @@ export default function ClientShow({ client }: Props) {
                             </CardContent>
                         </Card>
 
-                        {/* Stats cards */}
                         <Card>
                             <CardHeader className="pb-3"><CardTitle className="text-base">Estadísticas</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Total de visitas</span>
-                                    <span className="text-lg font-bold">{client.total_visits}</span>
+                                    <span className="text-lg font-bold">{profile?.total_visits ?? 0}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Total gastado</span>
-                                    <span className="text-lg font-bold text-green-600">{fmtCurrency(client.total_spent)}</span>
+                                    <span className="text-lg font-bold text-green-600">{fmtCurrency(profile?.total_spent ?? 0)}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Última visita</span>
-                                    <span className="text-sm">{fmtDate(client.last_visit_at)}</span>
+                                    <span className="text-sm">{fmtDate(profile?.last_visit_at ?? null)}</span>
                                 </div>
-                                {client.total_visits > 0 && (
+                                {(profile?.total_visits ?? 0) > 0 && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Ticket promedio</span>
-                                        <span className="text-sm font-semibold">{fmtCurrency(client.total_spent / client.total_visits)}</span>
+                                        <span className="text-sm font-semibold">{fmtCurrency((profile!.total_spent) / profile!.total_visits)}</span>
                                     </div>
                                 )}
                             </CardContent>
@@ -155,13 +171,13 @@ export default function ClientShow({ client }: Props) {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-0">
-                                {client.appointments.length === 0 ? (
+                                {appointments.length === 0 ? (
                                     <div className="py-12 text-center text-muted-foreground">
                                         <p className="text-sm">Sin citas registradas.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {client.appointments.map(apt => {
+                                        {appointments.map(apt => {
                                             const s = STATUS_MAP[apt.status] ?? { label: apt.status, variant: 'outline' as const };
                                             return (
                                                 <Link key={apt.id} href={`/barbershop/appointments/${apt.id}`}>

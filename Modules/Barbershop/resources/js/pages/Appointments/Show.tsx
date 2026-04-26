@@ -28,7 +28,13 @@ interface AppointmentDetail {
     checked_in_at: string | null;
     completed_at: string | null;
     barber: { id: number; name: string; color: string } | null;
-    client: { id: number; name: string; phone: string | null; total_visits: number; total_spent: number } | null;
+    client: {
+        id: number;
+        name: string;
+        phone: string | null;
+        mobile: string | null;
+        barbershop_profile: { total_visits: number; total_spent: number } | null;
+    } | null;
     services: { id: number; service_name: string; duration_minutes: number; price: number }[];
     products: { id: number; product_name: string; quantity: number; unit_price: number; total: number }[];
 }
@@ -150,8 +156,8 @@ export default function AppointmentShow({ appointment }: Props) {
                                                 <span className="text-xs text-muted-foreground">{appointment.client_phone}</span>
                                             </div>
                                         )}
-                                        {appointment.client && (
-                                            <p className="text-xs text-muted-foreground mt-1">{appointment.client.total_visits} visitas · {fmtCurrency(appointment.client.total_spent)} gastados</p>
+                                        {appointment.client?.barbershop_profile && (
+                                            <p className="text-xs text-muted-foreground mt-1">{appointment.client.barbershop_profile.total_visits} visitas · {fmtCurrency(appointment.client.barbershop_profile.total_spent)} gastados</p>
                                         )}
                                     </div>
                                 </div>

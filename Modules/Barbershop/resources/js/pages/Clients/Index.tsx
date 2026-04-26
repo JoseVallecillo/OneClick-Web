@@ -13,12 +13,15 @@ interface ClientRow {
     id: number;
     name: string;
     phone: string | null;
+    mobile: string | null;
     email: string | null;
-    total_visits: number;
-    total_spent: number;
-    last_visit_at: string | null;
     active: boolean;
-    preferred_barber: { id: number; name: string } | null;
+    barbershop_profile: {
+        total_visits: number;
+        total_spent: number;
+        last_visit_at: string | null;
+        preferred_barber: { id: number; name: string } | null;
+    } | null;
 }
 
 interface PaginatedClients {
@@ -46,9 +49,9 @@ export default function ClientsIndex({ clients, filters }: Props) {
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
-    const [search, setSearch]         = useState(filters.search ?? '');
+    const [search, setSearch]             = useState(filters.search ?? '');
     const [activeFilter, setActiveFilter] = useState(filters.active ?? '');
-    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deletingId, setDeletingId]     = useState<number | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -66,7 +69,7 @@ export default function ClientsIndex({ clients, filters }: Props) {
     }
 
     function del(client: ClientRow) {
-        if (!confirm(`¿Eliminar al cliente "${client.name}"? Esta acción no se puede deshacer.`)) return;
+        if (!confirm(`¿Eliminar el perfil de barbería de "${client.name}"?`)) return;
         setDeletingId(client.id);
         router.delete(`/barbershop/clients/${client.id}`, { onFinish: () => setDeletingId(null) });
     }
@@ -76,7 +79,7 @@ export default function ClientsIndex({ clients, filters }: Props) {
 
     return (
         <>
-            <Head title="Clientes" />
+            <Head title="Clientes de Barbería" />
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 {flash?.success && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-300">{flash.success}</div>}
                 {flash?.error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300">{flash.error}</div>}
@@ -119,7 +122,7 @@ export default function ClientsIndex({ clients, filters }: Props) {
                                         <thead>
                                             <tr className="border-b text-left text-muted-foreground">
                                                 <th className="pb-2 pr-3 font-medium">Nombre</th>
-                                                <th className="pb-2 pr-3 font-medium">Teléfono</th>
+                                                <th className="pb-2 pr-3 font-medium">Contacto</th>
                                                 <th className="pb-2 pr-3 font-medium">Barbero preferido</th>
                                                 <th className="pb-2 pr-3 font-medium text-right">Visitas</th>
                                                 <th className="pb-2 pr-3 font-medium text-right">Total gastado</th>
@@ -130,30 +133,33 @@ export default function ClientsIndex({ clients, filters }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {data.map(cl => (
-                                                <tr key={cl.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                                                    <td className="py-2 pr-3">
-                                                        <Link href={`/barbershop/clients/${cl.id}`} className="font-medium hover:text-primary hover:underline">{cl.name}</Link>
-                                                        {cl.email && <p className="text-xs text-muted-foreground">{cl.email}</p>}
-                                                    </td>
-                                                    <td className="py-2 pr-3 text-xs">{cl.phone ?? '—'}</td>
-                                                    <td className="py-2 pr-3 text-xs">{cl.preferred_barber?.name ?? '—'}</td>
-                                                    <td className="py-2 pr-3 text-right text-xs tabular-nums">{cl.total_visits}</td>
-                                                    <td className="py-2 pr-3 text-right text-xs font-semibold tabular-nums text-green-600">{fmtCurrency(cl.total_spent)}</td>
-                                                    <td className="py-2 pr-3 text-xs">{fmtDate(cl.last_visit_at)}</td>
-                                                    <td className="py-2 pr-3">
-                                                        <Badge variant={cl.active ? 'secondary' : 'outline'} className="text-[10px]">{cl.active ? 'Activo' : 'Inactivo'}</Badge>
-                                                    </td>
-                                                    <td className="py-2 pr-3">
-                                                        <Link href={`/barbershop/clients/${cl.id}`}><Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Eye className="h-3.5 w-3.5" /></Button></Link>
-                                                    </td>
-                                                    <td className="py-2">
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" disabled={deletingId === cl.id} onClick={() => del(cl)}>
-                                                            {deletingId === cl.id ? <Spinner className="h-3 w-3" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {data.map(cl => {
+                                                const profile = cl.barbershop_profile;
+                                                return (
+                                                    <tr key={cl.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                                                        <td className="py-2 pr-3">
+                                                            <Link href={`/barbershop/clients/${cl.id}`} className="font-medium hover:text-primary hover:underline">{cl.name}</Link>
+                                                            {cl.email && <p className="text-xs text-muted-foreground">{cl.email}</p>}
+                                                        </td>
+                                                        <td className="py-2 pr-3 text-xs">{cl.phone ?? cl.mobile ?? '—'}</td>
+                                                        <td className="py-2 pr-3 text-xs">{profile?.preferred_barber?.name ?? '—'}</td>
+                                                        <td className="py-2 pr-3 text-right text-xs tabular-nums">{profile?.total_visits ?? 0}</td>
+                                                        <td className="py-2 pr-3 text-right text-xs font-semibold tabular-nums text-green-600">{fmtCurrency(profile?.total_spent ?? 0)}</td>
+                                                        <td className="py-2 pr-3 text-xs">{fmtDate(profile?.last_visit_at ?? null)}</td>
+                                                        <td className="py-2 pr-3">
+                                                            <Badge variant={cl.active ? 'secondary' : 'outline'} className="text-[10px]">{cl.active ? 'Activo' : 'Inactivo'}</Badge>
+                                                        </td>
+                                                        <td className="py-2 pr-3">
+                                                            <Link href={`/barbershop/clients/${cl.id}`}><Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Eye className="h-3.5 w-3.5" /></Button></Link>
+                                                        </td>
+                                                        <td className="py-2">
+                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" disabled={deletingId === cl.id} onClick={() => del(cl)}>
+                                                                {deletingId === cl.id ? <Spinner className="h-3 w-3" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

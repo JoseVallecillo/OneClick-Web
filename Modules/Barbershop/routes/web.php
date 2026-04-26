@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Barbershop\Http\Controllers\AppointmentController;
 use Modules\Barbershop\Http\Controllers\BarberController;
+use Modules\Contacts\Models\Contact;
 use Modules\Barbershop\Http\Controllers\BarbershopClientController;
 use Modules\Barbershop\Http\Controllers\BarbershopConfigController;
 use Modules\Barbershop\Http\Controllers\BarbershopDashboardController;

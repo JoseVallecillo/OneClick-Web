@@ -48,9 +48,9 @@ class Barber extends Model
         return $this->hasMany(Appointment::class, 'barber_id');
     }
 
-    public function clients(): HasMany
+    public function clientProfiles(): HasMany
     {
-        return $this->hasMany(BarbershopClient::class, 'preferred_barber_id');
+        return $this->hasMany(BarbershopClientProfile::class, 'preferred_barber_id');
     }
 
     public function getScheduleForDay(int $dayOfWeek): ?BarberSchedule

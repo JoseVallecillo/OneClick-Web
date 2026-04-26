@@ -12,8 +12,9 @@ use Modules\Barbershop\Models\Appointment;
 use Modules\Barbershop\Models\AppointmentProduct;
 use Modules\Barbershop\Models\AppointmentService;
 use Modules\Barbershop\Models\Barber;
-use Modules\Barbershop\Models\BarbershopClient;
+use Modules\Barbershop\Models\BarbershopClientProfile;
 use Modules\Barbershop\Models\BarbershopService;
+use Modules\Contacts\Models\Contact;
 use Modules\Inventory\Models\Product;
 
 class AppointmentController extends Controller
@@ -67,7 +68,7 @@ class AppointmentController extends Controller
             'appointment' => null,
             'barbers'     => Barber::active()->with('schedules')->orderBy('name')->get(),
             'services'    => BarbershopService::active()->with('category')->orderBy('name')->get(),
-            'clients'     => BarbershopClient::active()->orderBy('name')->get(['id', 'name', 'phone', 'preferred_barber_id']),
+            'clients'     => Contact::where('is_client', true)->where('active', true)->with('barbershopProfile')->orderBy('name')->get(['id', 'name', 'phone', 'mobile']),
             'products'    => Product::where('active', true)->orderBy('name')->get(['id', 'name', 'price']),
             'defaultDate' => $request->input('date', today()->toDateString()),
         ]);
@@ -150,7 +151,7 @@ class AppointmentController extends Controller
             $apt->recalculateTotals();
 
             if ($apt->status === 'completed' && $apt->client_id) {
-                $apt->client->refreshStats();
+                BarbershopClientProfile::where('contact_id', $apt->client_id)->first()?->refreshStats();
             }
 
             if ($apt->status === 'in_progress') {
@@ -173,7 +174,7 @@ class AppointmentController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $appointment->load(['barber', 'client', 'services.service', 'products.product']);
+        $appointment->load(['barber', 'client.barbershopProfile', 'services.service', 'products.product']);
 
         return Inertia::render('Barbershop::Appointments/Show', [
             'appointment' => $appointment,
@@ -193,7 +194,7 @@ class AppointmentController extends Controller
             'appointment' => $appointment,
             'barbers'     => Barber::active()->with('schedules')->orderBy('name')->get(),
             'services'    => BarbershopService::active()->with('category')->orderBy('name')->get(),
-            'clients'     => BarbershopClient::active()->orderBy('name')->get(['id', 'name', 'phone', 'preferred_barber_id']),
+            'clients'     => Contact::where('is_client', true)->where('active', true)->with('barbershopProfile')->orderBy('name')->get(['id', 'name', 'phone', 'mobile']),
             'products'    => Product::where('active', true)->orderBy('name')->get(['id', 'name', 'price']),
             'defaultDate' => $appointment->appointment_date->toDateString(),
         ]);
@@ -289,7 +290,7 @@ class AppointmentController extends Controller
             $appointment->recalculateTotals();
 
             if ($appointment->client_id) {
-                $appointment->client->refreshStats();
+                BarbershopClientProfile::where('contact_id', $appointment->client_id)->first()?->refreshStats();
             }
         });
 
@@ -339,7 +340,7 @@ class AppointmentController extends Controller
         $appointment->update($updates);
 
         if ($appointment->isCompleted() && $appointment->client_id) {
-            $appointment->client->refreshStats();
+            BarbershopClientProfile::where('contact_id', $appointment->client_id)->first()?->refreshStats();
         }
 
         return back()->with('success', 'Estado de cita actualizado.');

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Contacts\Models\Contact;
 
 class Appointment extends Model
 {
@@ -56,7 +57,12 @@ class Appointment extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(BarbershopClient::class, 'client_id');
+        return $this->belongsTo(Contact::class, 'client_id');
+    }
+
+    public function clientProfile(): BelongsTo
+    {
+        return $this->belongsTo(BarbershopClientProfile::class, 'client_id', 'contact_id');
     }
 
     public function barber(): BelongsTo

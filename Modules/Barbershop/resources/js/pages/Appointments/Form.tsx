@@ -21,7 +21,13 @@ interface ServiceOption {
     category: { id: number; name: string; color: string } | null;
 }
 
-interface ClientOption { id: number; name: string; phone: string | null; preferred_barber_id: number | null; }
+interface ClientOption {
+    id: number;
+    name: string;
+    phone: string | null;
+    mobile: string | null;
+    barbershop_profile: { preferred_barber_id: number | null } | null;
+}
 interface ProductOption { id: number; name: string; price: number; }
 
 interface AppointmentDetail {
@@ -145,8 +151,9 @@ export default function AppointmentForm({ appointment, barbers, services, client
             const cl = clients.find(c => String(c.id) === clientId);
             if (cl) {
                 setData('client_name', cl.name);
-                setData('client_phone', cl.phone ?? '');
-                if (cl.preferred_barber_id) setData('barber_id', String(cl.preferred_barber_id));
+                setData('client_phone', cl.phone ?? cl.mobile ?? '');
+                const preferredBarberId = cl.barbershop_profile?.preferred_barber_id;
+                if (preferredBarberId) setData('barber_id', String(preferredBarberId));
             }
         }
     }
