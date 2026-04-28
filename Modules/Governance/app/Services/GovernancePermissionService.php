@@ -2,6 +2,7 @@
 
 namespace Modules\Governance\Services;
 
+use App\Exceptions\InsufficientPermissionsException;
 use App\Models\User;
 
 class GovernancePermissionService
@@ -28,7 +29,7 @@ class GovernancePermissionService
     public static function ensurePermission(User $user, ?string $requiredPermission): void
     {
         if (!self::hasPermission($user, $requiredPermission)) {
-            abort(403, 'Insufficient permissions to perform this action.');
+            throw new InsufficientPermissionsException($requiredPermission ?? 'unknown');
         }
     }
 }

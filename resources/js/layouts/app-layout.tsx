@@ -1,3 +1,4 @@
+import { PermissionDeniedDialog } from '@/components/permission-denied-dialog';
 import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -9,8 +10,11 @@ export default function AppLayout({
     children: React.ReactNode;
 }) {
     return (
-        <AppLayoutTemplate breadcrumbs={breadcrumbs}>
-            {children}
-        </AppLayoutTemplate>
+        <>
+            <PermissionDeniedDialog />
+            <AppLayoutTemplate breadcrumbs={breadcrumbs}>
+                {children}
+            </AppLayoutTemplate>
+        </>
     );
 }
