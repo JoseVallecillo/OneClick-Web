@@ -4,15 +4,17 @@ namespace Modules\Inventory\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Accounting\Models\Account;
 
 class ProductCategory extends Model
 {
     protected $fillable = [
         'name',
-        'account_inventory',
-        'account_income',
-        'account_cogs',
+        'account_inventory_id',
+        'account_income_id',
+        'account_cogs_id',
         'image_path',
         'active',
     ];
@@ -37,5 +39,20 @@ class ProductCategory extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'category_id');
+    }
+
+    public function accountInventory(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_inventory_id');
+    }
+
+    public function accountIncome(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_income_id');
+    }
+
+    public function accountCogs(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_cogs_id');
     }
 }

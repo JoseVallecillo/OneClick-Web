@@ -65,8 +65,8 @@ function fmtDate(dateStr: string) {
     });
 }
 
-function fmtNum(value: number) {
-    return value.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtNum(value: number | string) {
+    return Number(value).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ── Detail row ─────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function MovementShow({ move }: Props) {
-    const grandTotal = move.lines.reduce((sum, l) => sum + l.total_cost, 0);
+    const grandTotal = move.lines.reduce((sum, l) => sum + Number(l.total_cost), 0);
 
     return (
         <>
@@ -191,7 +191,7 @@ export default function MovementShow({ move }: Props) {
                                             <td className="py-2 pr-4 text-right tabular-nums">
                                                 {fmtNum(line.qty)}{' '}
                                                 <span className="text-xs text-muted-foreground">
-                                                    {line.product.uom.abbreviation}
+                                                    {line.product.uom?.abbreviation ?? '—'}
                                                 </span>
                                             </td>
                                             <td className="py-2 pr-4 text-right tabular-nums">

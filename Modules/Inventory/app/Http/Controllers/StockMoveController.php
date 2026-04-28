@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Inventory\Models\Product;
+use Modules\Inventory\Models\StockLot;
 use Modules\Inventory\Models\StockMove;
 use Modules\Inventory\Models\StockMoveLine;
 use Modules\Inventory\Models\Warehouse;
@@ -65,6 +66,9 @@ class StockMoveController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
+        $type      = $request->get('type', 'in');
+        $isInbound = in_array($type, ['in', 'initial', 'transfer_in']);
+
         return Inertia::render('Inventory::Movements/Form', [
             'warehouses' => Warehouse::where('active', true)->orderBy('name')->get(),
             'products'   => Product::where('type', 'storable')
@@ -72,7 +76,13 @@ class StockMoveController extends Controller
                 ->with(['category', 'uom'])
                 ->orderBy('name')
                 ->get(),
-            'type'       => $request->get('type', 'in'),
+            'type' => $type,
+            'lots' => $isInbound
+                ? collect()
+                : StockLot::where('qty_available', '>', 0)
+                    ->orderBy('product_id')
+                    ->orderBy('lot_number')
+                    ->get(['id', 'product_id', 'warehouse_id', 'lot_number', 'qty_available', 'unit_cost']),
         ]);
     }
 
@@ -89,11 +99,12 @@ class StockMoveController extends Controller
             'reference'         => ['nullable', 'string', 'max:100'],
             'notes'             => ['nullable', 'string', 'max:2000'],
             'moved_at'          => ['required', 'date'],
-            'lines'             => ['required', 'array', 'min:1'],
+            'lines'              => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'exists:products,id'],
-            'lines.*.lot_id'    => ['nullable', 'exists:stock_lots,id'],
-            'lines.*.qty'       => ['required', 'numeric'],
-            'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
+            'lines.*.lot_number' => ['nullable', 'string', 'max:100'],
+            'lines.*.lot_id'     => ['nullable'],
+            'lines.*.qty'        => ['required', 'numeric'],
+            'lines.*.unit_cost'  => ['required', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($request) {
@@ -111,10 +122,36 @@ class StockMoveController extends Controller
             ]);
 
             foreach ($request->input('lines') as $line) {
+                $product = Product::find($line['product_id']);
+                $lotId   = null;
+
+                if ($product && $product->tracking !== 'none') {
+                    if (in_array($move->type, ['in', 'initial', 'transfer_in'])) {
+                        $lotNumber = trim($line['lot_number'] ?? '');
+                        if ($lotNumber !== '') {
+                            $lot = StockLot::firstOrCreate(
+                                [
+                                    'product_id'   => $product->id,
+                                    'warehouse_id' => $move->warehouse_id,
+                                    'lot_number'   => $lotNumber,
+                                ],
+                                [
+                                    'qty_available' => 0,
+                                    'unit_cost'     => $line['unit_cost'],
+                                    'received_at'   => $move->moved_at,
+                                ]
+                            );
+                            $lotId = $lot->id;
+                        }
+                    } else {
+                        $lotId = !empty($line['lot_id']) ? (int) $line['lot_id'] : null;
+                    }
+                }
+
                 StockMoveLine::create([
                     'stock_move_id' => $move->id,
                     'product_id'    => $line['product_id'],
-                    'lot_id'        => $line['lot_id'] ?? null,
+                    'lot_id'        => $lotId,
                     'qty'           => $line['qty'],
                     'unit_cost'     => $line['unit_cost'],
                 ]);

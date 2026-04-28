@@ -27,13 +27,15 @@ class Product extends Model
         'min_stock',
         'image_path',
         'active',
+        'has_recipe',
     ];
 
     protected $casts = [
-        'cost'      => 'decimal:4',
-        'price'     => 'decimal:4',
-        'min_stock' => 'decimal:2',
-        'active'    => 'boolean',
+        'cost'       => 'decimal:4',
+        'price'      => 'decimal:4',
+        'min_stock'  => 'decimal:2',
+        'active'     => 'boolean',
+        'has_recipe' => 'boolean',
     ];
 
     // -------------------------------------------------------------------------
@@ -88,6 +90,16 @@ class Product extends Model
     public function rentalRate(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(RentalRate::class, 'product_id');
+    }
+
+    public function recipeLines(): HasMany
+    {
+        return $this->hasMany(ProductRecipeLine::class, 'product_id');
+    }
+
+    public function prices(): HasMany
+    {
+        return $this->hasMany(ProductPrice::class, 'product_id')->orderBy('name');
     }
 
     // -------------------------------------------------------------------------

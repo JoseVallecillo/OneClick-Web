@@ -1,3 +1,4 @@
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { dashboard } from '@/routes';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
+    AlertCircle,
     Ban,
     CreditCard,
     History,
@@ -111,6 +113,11 @@ export default function Sell({ session, products, customers, recentSales }: Prop
         const t = setTimeout(() => setFlashVisible(false), 3000);
         return () => clearTimeout(t);
     }, [flash?.success]);
+
+    const [errorModalOpen, setErrorModalOpen] = useState(!!flash?.error);
+    useEffect(() => {
+        setErrorModalOpen(!!flash?.error);
+    }, [flash?.error]);
 
     // ── Cart state ──────────────────────────────────────────────────────────
     const [cart, setCart]             = useState<CartLine[]>([]);
@@ -249,6 +256,22 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     return (
         <>
             <Head title={`POS — ${session.reference}`} />
+
+            <AlertDialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" /> Acción bloqueada
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-foreground mt-2">
+                            {flash?.error}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setErrorModalOpen(false)}>Entendido</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {flash?.success && flashVisible && (
                 <div className="fixed top-4 right-4 z-50 max-w-sm rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg dark:border-green-800 dark:bg-green-950 dark:text-green-300">

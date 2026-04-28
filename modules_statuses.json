@@ -1,20 +1,20 @@
 {
     "AppStore": true,
-    "AutoLote": true,
-    "Barbershop": true,
-    "CarService": true,
+    "AutoLote": false,
+    "Barbershop": false,
+    "CarService": false,
     "Contacts": true,
     "Governance": true,
     "Inventory": true,
     "Pos": true,
-    "Purchases": true,
+    "Purchases": false,
     "Sales": true,
     "Settings": true,
     "Users": true,
     "Subscriptions": true,
     "Accounting": true,
-    "Rentals": true,
-    "Hospitality": true,
-    "RealEstate": true,
-    "Microfinance": true
+    "Rentals": false,
+    "Hospitality": false,
+    "RealEstate": false,
+    "Microfinance": false
 }

@@ -35,6 +35,8 @@ interface ProductOpt {
 
 interface LotOpt {
     id: number;
+    product_id: number;
+    warehouse_id: number;
     lot_number: string;
     qty_available: number;
     unit_cost: number;
@@ -43,12 +45,14 @@ interface LotOpt {
 interface Props {
     warehouses: WarehouseOpt[];
     products: ProductOpt[];
+    lots: LotOpt[];
     type: string;
 }
 
 interface MoveLine {
     product_id: string;
     lot_number: string;
+    lot_id: string;
     qty: string;
     unit_cost: string;
 }
@@ -73,19 +77,21 @@ const TYPE_BADGE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 
     transfer_in:  'outline',
 };
 
-const EMPTY_LINE: MoveLine = { product_id: '__none__', lot_number: '', qty: '1', unit_cost: '0' };
+const EMPTY_LINE: MoveLine = { product_id: '__none__', lot_number: '', lot_id: '__none__', qty: '1', unit_cost: '0' };
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function MovementForm({ warehouses, products, type }: Props) {
+export default function MovementForm({ warehouses, products, lots, type }: Props) {
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
     const showDestWarehouse = type === 'transfer_out' || type === 'transfer_in';
+    const isInbound = ['in', 'initial', 'transfer_in'].includes(type);
 
     const today = new Date().toISOString().split('T')[0];
 
-    const { data, setData, post, processing, errors } = useForm<{
+    const { data, setData, post, processing, errors, transform } = useForm<{
+        type: string;
         warehouse_id: string;
         dest_warehouse_id: string;
         reference: string;
@@ -94,10 +100,11 @@ export default function MovementForm({ warehouses, products, type }: Props) {
         notes: string;
         lines: MoveLine[];
     }>({
+        type:              type,
         warehouse_id:      '__none__',
         dest_warehouse_id: '__none__',
         reference:         '',
-        status:            'confirmed',
+        status:            'draft',
         moved_at:          today,
         notes:             '',
         lines:             [{ ...EMPTY_LINE }],
@@ -115,12 +122,12 @@ export default function MovementForm({ warehouses, products, type }: Props) {
         const updated = data.lines.map((line, i) => {
             if (i !== index) return line;
             const newLine = { ...line, [field]: value };
-            // Auto-fill cost when product changes
             if (field === 'product_id') {
                 const prod = products.find((p) => String(p.id) === value);
                 if (prod) {
                     newLine.unit_cost = String(prod.cost);
                     newLine.lot_number = '';
+                    newLine.lot_id     = '__none__';
                 }
             }
             return newLine;
@@ -140,17 +147,26 @@ export default function MovementForm({ warehouses, products, type }: Props) {
         return data.lines.reduce((sum, line) => sum + lineTotal(line), 0);
     }
 
+    function getAvailableLots(productId: string, warehouseId: string): LotOpt[] {
+        if (productId === '__none__' || warehouseId === '__none__') return [];
+        return lots.filter(
+            (l) => String(l.product_id) === productId && String(l.warehouse_id) === warehouseId
+        );
+    }
+
     function submit(status: 'draft' | 'confirmed') {
-        setData('status', status);
-        // We use a small timeout to ensure setData has updated the status before posting
-        // Alternatively, we could just append the status to the post data if useForm supported it easily
-        // But Inertia's post doesn't take data object as second param for useForm.
-        // So we'll pass status as a separate param or rely on the state.
-        post('/inventory/movements', {
-            onBefore: () => {
-                data.status = status;
-            }
-        });
+        transform((d) => ({
+            ...d,
+            status,
+            warehouse_id:      d.warehouse_id      === '__none__' ? '' : d.warehouse_id,
+            dest_warehouse_id: d.dest_warehouse_id === '__none__' ? '' : d.dest_warehouse_id,
+            lines: d.lines.map(line => ({
+                ...line,
+                product_id: line.product_id === '__none__' ? '' : line.product_id,
+                lot_id:     line.lot_id     === '__none__' ? '' : line.lot_id,
+            })),
+        }));
+        post('/inventory/movements');
     }
 
     const typeLabel = TYPE_LABELS[type] ?? type;
@@ -318,7 +334,7 @@ export default function MovementForm({ warehouses, products, type }: Props) {
                                     <thead>
                                         <tr className="border-b text-left text-muted-foreground">
                                             <th className="pb-2 pr-3 font-medium min-w-[200px]">Producto</th>
-                                            <th className="pb-2 pr-3 font-medium min-w-[120px]">Lote / Serie</th>
+                                            <th className="pb-2 pr-3 font-medium min-w-[140px]">{isInbound ? 'Lote / Serie (nuevo)' : 'Lote / Serie'}</th>
                                             <th className="pb-2 pr-3 font-medium w-24">Cantidad</th>
                                             <th className="pb-2 pr-3 font-medium w-28">Costo Unit.</th>
                                             <th className="pb-2 pr-3 font-medium w-28 text-right">Total</th>
@@ -350,19 +366,50 @@ export default function MovementForm({ warehouses, products, type }: Props) {
                                                             </SelectContent>
                                                         </Select>
                                                         {prod && (
-                                                            <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                                                {prod.category.name} · {prod.uom.abbreviation}
+                                                            <p className="mt-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
+                                                                {prod.category?.name} · {prod.uom?.abbreviation ?? '—'}
+                                                                {prod.tracking !== 'none' && (
+                                                                    <span className="rounded bg-amber-100 px-1 text-amber-700 dark:bg-amber-900 dark:text-amber-300 font-medium">
+                                                                        {prod.tracking === 'serial' ? 'serie' : 'lote'}
+                                                                    </span>
+                                                                )}
                                                             </p>
                                                         )}
                                                     </td>
                                                     <td className="py-2 pr-3">
                                                         {showLot ? (
-                                                            <Input
-                                                                placeholder={prod?.tracking === 'serial' ? 'Nº serie' : 'Nº lote'}
-                                                                value={line.lot_number}
-                                                                onChange={(e) => updateLine(index, 'lot_number', e.target.value)}
-                                                                className="w-full font-mono text-xs h-9"
-                                                            />
+                                                            isInbound ? (
+                                                                <Input
+                                                                    placeholder={prod?.tracking === 'serial' ? 'Nº de serie' : 'Nº de lote'}
+                                                                    value={line.lot_number}
+                                                                    onChange={(e) => updateLine(index, 'lot_number', e.target.value)}
+                                                                    className="w-full font-mono text-xs h-9"
+                                                                />
+                                                            ) : (
+                                                                <Select
+                                                                    value={line.lot_id}
+                                                                    onValueChange={(v) => {
+                                                                        updateLine(index, 'lot_id', v);
+                                                                        const lot = lots.find((l) => String(l.id) === v);
+                                                                        if (lot) updateLine(index, 'unit_cost', String(lot.unit_cost));
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-9 min-w-[140px]">
+                                                                        <SelectValue placeholder="Seleccionar lote..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="__none__">— Ninguno —</SelectItem>
+                                                                        {getAvailableLots(line.product_id, data.warehouse_id).map((lot) => (
+                                                                            <SelectItem key={lot.id} value={String(lot.id)}>
+                                                                                <span className="font-mono">{lot.lot_number}</span>
+                                                                                <span className="ml-2 text-[10px] text-muted-foreground">
+                                                                                    disp: {lot.qty_available}
+                                                                                </span>
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )
                                                         ) : (
                                                             <span className="text-xs text-muted-foreground">—</span>
                                                         )}

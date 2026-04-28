@@ -56,6 +56,7 @@ class PosTableController extends Controller
             'tables'        => $tables,
             'sections'      => $sections,
             'activeSection' => $section,
+            'activeView'    => $request->input('view', 'all'),
             'activeSession' => $activeSession ? [
                 'id'        => $activeSession->id,
                 'reference' => $activeSession->reference,
@@ -160,22 +161,26 @@ class PosTableController extends Controller
                 ->with('warning', 'Debes abrir una caja antes de atender mesas.');
         }
 
-        // Reuse existing open order or create a new one
-        $order = PosOrder::where('pos_table_id', $table->id)
-            ->where('status', 'open')
-            ->first();
+        // Reuse existing open order or create a new one inside a transaction to prevent race conditions
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($table, $session, $request) {
+            $existingOrder = PosOrder::where('pos_table_id', $table->id)
+                ->where('status', 'open')
+                ->first();
 
-        if (!$order) {
-            $order = PosOrder::create([
+            if ($existingOrder) {
+                return $existingOrder;
+            }
+
+            return PosOrder::create([
                 'reference'      => PosOrder::generateReference(),
                 'pos_session_id' => $session->id,
                 'pos_table_id'   => $table->id,
                 'pos_waiter_id'  => $request->input('waiter_id') ?: null,
                 'status'         => 'open',
                 'opened_at'      => now(),
-                'created_by'     => Auth::id(),
+                'created_by'     => \Illuminate\Support\Facades\Auth::id(),
             ]);
-        }
+        });
 
         $waiterName = null;
         if ($order->pos_waiter_id) {
@@ -217,7 +222,10 @@ class PosTableController extends Controller
     public function closeTable(PosTable $table): RedirectResponse
     {
         if ($table->current_order_id) {
-            return back()->with('error', 'La mesa tiene una orden activa. Cobra o cancela la orden antes de cerrar la mesa.');
+            $order = \Modules\Pos\Models\PosOrder::find($table->current_order_id);
+            if ($order && $order->isOpen()) {
+                $order->update(['status' => 'cancelled']);
+            }
         }
 
         $table->update([

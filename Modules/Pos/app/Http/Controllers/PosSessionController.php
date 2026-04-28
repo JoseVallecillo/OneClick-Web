@@ -59,6 +59,7 @@ class PosSessionController extends Controller
             'warehouses'      => Warehouse::where('active', true)->orderBy('name')->get(['id', 'name']),
             'currencies'      => Currency::where('active', true)->orderBy('name')->get(['id', 'code', 'symbol', 'name']),
             'primaryCurrency' => Currency::where('is_primary', true)->first(['id', 'code', 'symbol']),
+            'users'           => \App\Models\User::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -73,19 +74,22 @@ class PosSessionController extends Controller
             'currency_id'     => ['required', 'exists:currencies,id'],
             'opening_balance' => ['required', 'numeric', 'min:0'],
             'notes'           => ['nullable', 'string', 'max:1000'],
+            'user_id'         => ['nullable', 'exists:users,id'],
         ]);
 
-        $session = PosSession::create([
-            'reference'       => PosSession::generateReference(),
-            'name'            => $data['name'] ?? null,
-            'warehouse_id'    => $data['warehouse_id'],
-            'currency_id'     => $data['currency_id'],
-            'status'          => 'open',
-            'opening_balance' => $data['opening_balance'],
-            'opened_at'       => now(),
-            'notes'           => $data['notes'] ?? null,
-            'created_by'      => Auth::id(),
-        ]);
+        $session = \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            return PosSession::create([
+                'reference'       => PosSession::generateReference(),
+                'name'            => $data['name'] ?? null,
+                'warehouse_id'    => $data['warehouse_id'],
+                'currency_id'     => $data['currency_id'],
+                'status'          => 'open',
+                'opening_balance' => $data['opening_balance'],
+                'opened_at'       => now(),
+                'notes'           => $data['notes'] ?? null,
+                'created_by'      => $data['user_id'] ?? \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        });
 
         return redirect()->route('pos.sell', $session)
             ->with('success', "Sesión {$session->reference} abierta. ¡Listo para vender!");
@@ -118,12 +122,16 @@ class PosSessionController extends Controller
     // Close — form to close session
     // -------------------------------------------------------------------------
 
-    public function close(Request $request, PosSession $session): Response
+    public function close(Request $request, PosSession $session): Response|RedirectResponse
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
 
         abort_if($session->isClosed(), 403, 'Esta sesión ya está cerrada.');
+
+        if ($session->orders()->where('status', 'open')->exists()) {
+            return redirect('/pos/sessions/' . $session->id)->with('error', 'No puedes cerrar la caja porque hay mesas o cuentas en espera que aún no se han cobrado.');
+        }
 
         $session->load(['warehouse', 'currency']);
         $session->recalculateTotals();
@@ -139,6 +147,10 @@ class PosSessionController extends Controller
         $this->requireSubscription();
 
         abort_if($session->isClosed(), 403, 'Esta sesión ya está cerrada.');
+
+        if ($session->orders()->where('status', 'open')->exists()) {
+            return redirect('/pos/sessions/' . $session->id)->with('error', 'No puedes cerrar la caja porque hay mesas o cuentas en espera que aún no se han cobrado.');
+        }
 
         $data = $request->validate([
             'closing_balance' => ['required', 'numeric', 'min:0'],

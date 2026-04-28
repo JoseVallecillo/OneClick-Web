@@ -68,6 +68,11 @@ class PosSession extends Model
         return $this->hasMany(PosSale::class, 'pos_session_id')->orderByDesc('id');
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(\Modules\Pos\Models\PosOrder::class, 'pos_session_id')->orderByDesc('id');
+    }
+
     // -------------------------------------------------------------------------
     // Status helpers
     // -------------------------------------------------------------------------
@@ -90,7 +95,7 @@ class PosSession extends Model
 
         $last = static::where('reference', 'like', $prefix . '%')
             ->lockForUpdate()
-            ->orderByRaw('CAST(SUBSTRING(reference, ?) AS UNSIGNED) DESC', [strlen($prefix) + 1])
+            ->orderByRaw('CAST(SUBSTRING(reference FROM ' . (strlen($prefix) + 1) . ') AS INTEGER) DESC')
             ->value('reference');
 
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
@@ -105,6 +110,7 @@ class PosSession extends Model
     public function recalculateTotals(): void
     {
         $row = $this->sales()
+            ->reorder()
             ->selectRaw("
                 COUNT(CASE WHEN status = 'completed' THEN 1 END)                                   AS sales_count,
                 COUNT(CASE WHEN status = 'voided'    THEN 1 END)                                   AS voided_count,

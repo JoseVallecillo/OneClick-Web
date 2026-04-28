@@ -38,6 +38,12 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name'           => config('app.name'),
+            'flash'          => [
+                'success' => $request->session()->get('success'),
+                'error'   => $request->session()->get('error'),
+                'warning' => $request->session()->get('warning'),
+                'info'    => $request->session()->get('info'),
+            ],
             'enabledModules' => $this->resolveEnabledModules(),
             'auth' => [
                 // Cargamos el perfil junto al usuario para que all_permissions

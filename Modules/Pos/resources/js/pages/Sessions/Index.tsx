@@ -163,6 +163,7 @@ export default function SessionsIndex({ sessions, filters }: Props) {
                                                 <th className="pb-2 pr-3 font-medium text-right">Total ventas</th>
                                                 <th className="pb-2 pr-3 font-medium text-center">Ventas</th>
                                                 <th className="pb-2 pr-3 font-medium">Apertura</th>
+                                                <th className="pb-2 pr-3 font-medium">Cierre</th>
                                                 <th className="pb-2 font-medium">Acciones</th>
                                             </tr>
                                         </thead>
@@ -185,6 +186,7 @@ export default function SessionsIndex({ sessions, filters }: Props) {
                                                         </td>
                                                         <td className="py-2 pr-3 text-center text-xs tabular-nums">{s.sales_count}</td>
                                                         <td className="py-2 pr-3 text-xs text-muted-foreground">{fmtDate(s.opened_at)}</td>
+                                                        <td className="py-2 pr-3 text-xs text-muted-foreground">{fmtDate(s.closed_at)}</td>
                                                         <td className="py-2">
                                                             <div className="flex items-center gap-1">
                                                                 {s.status === 'open' && (

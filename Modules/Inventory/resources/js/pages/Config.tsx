@@ -15,17 +15,26 @@ import { Spinner } from '@/components/ui/spinner';
 import { ImagePicker } from '@/components/image-picker';
 import { dashboard } from '@/routes';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+interface AccountOption {
+    id: number;
+    code: string;
+    name: string;
+}
 
 interface CategoryRow {
     id: number;
     name: string;
-    account_inventory: string | null;
-    account_income: string | null;
-    account_cogs: string | null;
+    account_inventory_id: number | null;
+    account_income_id: number | null;
+    account_cogs_id: number | null;
+    account_inventory: AccountOption | null;
+    account_income: AccountOption | null;
+    account_cogs: AccountOption | null;
     image_path: string | null;
     active: boolean;
 }
@@ -56,34 +65,133 @@ interface Props {
     uoms: UomRow[];
     warehouses: WarehouseRow[];
     branches: BranchRow[];
+    accounts_asset: AccountOption[];
+    accounts_income: AccountOption[];
+    accounts_expense: AccountOption[];
+}
+
+// ── AccountSelect ──────────────────────────────────────────────────────────────
+
+function AccountSelect({
+    accounts,
+    value,
+    onChange,
+    placeholder,
+}: {
+    accounts: AccountOption[];
+    value: string;
+    onChange: (val: string) => void;
+    placeholder: string;
+}) {
+    const [search, setSearch] = useState('');
+    const [open, setOpen]     = useState(false);
+    const wrapperRef          = useRef<HTMLDivElement>(null);
+
+    const selected = accounts.find((a) => String(a.id) === value) ?? null;
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+        }
+        if (open) document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    const filtered = useMemo(() => {
+        const q = search.toLowerCase();
+        return accounts
+            .filter((a) => a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))
+            .slice(0, 80);
+    }, [search, accounts]);
+
+    return (
+        <div ref={wrapperRef} className="relative">
+            <div
+                className={`flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 text-sm cursor-pointer transition-colors ${open ? 'border-primary ring-1 ring-primary/20' : 'border-input'}`}
+                onClick={() => { setOpen((o) => !o); setSearch(''); }}
+            >
+                {selected ? (
+                    <span className="font-mono text-xs truncate">{selected.code} — {selected.name}</span>
+                ) : (
+                    <span className="text-muted-foreground">{placeholder}</span>
+                )}
+                <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+            </div>
+
+            {open && (
+                <div className="absolute z-50 left-0 right-0 top-[calc(100%+4px)] bg-popover border border-border rounded-md shadow-md flex flex-col">
+                    <div className="p-2 border-b">
+                        <input
+                            autoFocus
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Buscar por código o nombre..."
+                            className="w-full bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground"
+                        />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto p-1">
+                        <button
+                            type="button"
+                            onClick={() => { onChange('__none__'); setOpen(false); }}
+                            className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent text-muted-foreground italic"
+                        >
+                            Sin cuenta
+                        </button>
+                        {filtered.length === 0 ? (
+                            <p className="py-4 text-center text-xs text-muted-foreground">Sin resultados</p>
+                        ) : (
+                            filtered.map((a) => (
+                                <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => { onChange(String(a.id)); setOpen(false); }}
+                                    className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent flex items-center gap-2 ${String(a.id) === value ? 'bg-accent' : ''}`}
+                                >
+                                    <span className="font-mono text-xs text-muted-foreground w-16 shrink-0">{a.code}</span>
+                                    <span className="truncate">{a.name}</span>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 type TabKey = 'categories' | 'uoms' | 'warehouses';
 
 // ── Categories Tab ─────────────────────────────────────────────────────────────
 
-function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
+function CategoriesTab({ categories, accounts_asset, accounts_income, accounts_expense }: {
+    categories: CategoryRow[];
+    accounts_asset: AccountOption[];
+    accounts_income: AccountOption[];
+    accounts_expense: AccountOption[];
+}) {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const { data, setData, post, patch, processing, errors, reset } = useForm({
-        name: '',
-        account_inventory: '',
-        account_income: '',
-        account_cogs: '',
-        image_path: '',
-        active: true as boolean,
+        name:                 '',
+        account_inventory_id: '__none__' as string,
+        account_income_id:    '__none__' as string,
+        account_cogs_id:      '__none__' as string,
+        image_path:           '',
+        active:               true as boolean,
     });
+
+    function toVal(id: number | null) { return id ? String(id) : '__none__'; }
 
     function startEdit(row: CategoryRow) {
         setEditingId(row.id);
         setData({
-            name: row.name,
-            account_inventory: row.account_inventory ?? '',
-            account_income: row.account_income ?? '',
-            account_cogs: row.account_cogs ?? '',
-            image_path: row.image_path ?? '',
-            active: row.active,
+            name:                 row.name,
+            account_inventory_id: toVal(row.account_inventory_id),
+            account_income_id:    toVal(row.account_income_id),
+            account_cogs_id:      toVal(row.account_cogs_id),
+            image_path:           row.image_path ?? '',
+            active:               row.active,
         });
     }
 
@@ -92,16 +200,26 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
         reset();
     }
 
+    function nullify(val: string) { return val === '__none__' ? null : val; }
+
     function submit(e: React.FormEvent) {
         e.preventDefault();
+        const payload = {
+            ...data,
+            account_inventory_id: nullify(data.account_inventory_id),
+            account_income_id:    nullify(data.account_income_id),
+            account_cogs_id:      nullify(data.account_cogs_id),
+        };
         if (editingId !== null) {
             patch(`/inventory/config/categories/${editingId}`, {
+                data: payload,
                 onSuccess: () => { setEditingId(null); reset(); },
-            });
+            } as any);
         } else {
             post('/inventory/config/categories', {
+                data: payload,
                 onSuccess: () => reset(),
-            });
+            } as any);
         }
     }
 
@@ -137,31 +255,34 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
                             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="cat_acct_inv">Cta. Inventario</Label>
-                            <Input
-                                id="cat_acct_inv"
-                                placeholder="1-1-03"
-                                value={data.account_inventory}
-                                onChange={(e) => setData('account_inventory', e.target.value)}
+                            <Label>Cta. Inventario <span className="text-[10px] text-muted-foreground">(Activo)</span></Label>
+                            <AccountSelect
+                                accounts={accounts_asset}
+                                value={data.account_inventory_id}
+                                onChange={(v) => setData('account_inventory_id', v)}
+                                placeholder="Seleccionar cuenta de activo..."
                             />
+                            {errors.account_inventory_id && <p className="text-xs text-destructive">{errors.account_inventory_id}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="cat_acct_inc">Cta. Ingresos</Label>
-                            <Input
-                                id="cat_acct_inc"
-                                placeholder="4-1-01"
-                                value={data.account_income}
-                                onChange={(e) => setData('account_income', e.target.value)}
+                            <Label>Cta. Ingresos <span className="text-[10px] text-muted-foreground">(Ingreso)</span></Label>
+                            <AccountSelect
+                                accounts={accounts_income}
+                                value={data.account_income_id}
+                                onChange={(v) => setData('account_income_id', v)}
+                                placeholder="Seleccionar cuenta de ingreso..."
                             />
+                            {errors.account_income_id && <p className="text-xs text-destructive">{errors.account_income_id}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="cat_acct_cogs">Cta. Costo de Ventas</Label>
-                            <Input
-                                id="cat_acct_cogs"
-                                placeholder="5-1-01"
-                                value={data.account_cogs}
-                                onChange={(e) => setData('account_cogs', e.target.value)}
+                            <Label>Cta. Costo de Ventas <span className="text-[10px] text-muted-foreground">(Gasto)</span></Label>
+                            <AccountSelect
+                                accounts={accounts_expense}
+                                value={data.account_cogs_id}
+                                onChange={(v) => setData('account_cogs_id', v)}
+                                placeholder="Seleccionar cuenta de gasto..."
                             />
+                            {errors.account_cogs_id && <p className="text-xs text-destructive">{errors.account_cogs_id}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor="cat_image">Imagen de Categoría</Label>
@@ -234,9 +355,15 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
                                                 </div>
                                             </td>
                                             <td className="py-2 pr-4 font-medium">{row.name}</td>
-                                            <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.account_inventory ?? '—'}</td>
-                                            <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.account_income ?? '—'}</td>
-                                            <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.account_cogs ?? '—'}</td>
+                                            <td className="py-2 pr-4 text-xs text-muted-foreground">
+                                                {row.account_inventory ? <span className="font-mono">{row.account_inventory.code}</span> : '—'}
+                                            </td>
+                                            <td className="py-2 pr-4 text-xs text-muted-foreground">
+                                                {row.account_income ? <span className="font-mono">{row.account_income.code}</span> : '—'}
+                                            </td>
+                                            <td className="py-2 pr-4 text-xs text-muted-foreground">
+                                                {row.account_cogs ? <span className="font-mono">{row.account_cogs.code}</span> : '—'}
+                                            </td>
                                             <td className="py-2 pr-4">
                                                 <Badge variant={row.active ? 'secondary' : 'outline'}>
                                                     {row.active ? 'Activa' : 'Inactiva'}
@@ -651,7 +778,7 @@ const TABS: { key: TabKey; label: string }[] = [
     { key: 'warehouses', label: 'Almacenes' },
 ];
 
-export default function InventoryConfig({ categories, uoms, warehouses, branches }: Props) {
+export default function InventoryConfig({ categories, uoms, warehouses, branches, accounts_asset, accounts_income, accounts_expense }: Props) {
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
     const [activeTab, setActiveTab] = useState<TabKey>('categories');
@@ -690,7 +817,7 @@ export default function InventoryConfig({ categories, uoms, warehouses, branches
                 </div>
 
                 {/* Tab content */}
-                {activeTab === 'categories' && <CategoriesTab categories={categories} />}
+                {activeTab === 'categories' && <CategoriesTab categories={categories} accounts_asset={accounts_asset} accounts_income={accounts_income} accounts_expense={accounts_expense} />}
                 {activeTab === 'uoms'       && <UomsTab uoms={uoms} />}
                 {activeTab === 'warehouses' && <WarehousesTab warehouses={warehouses} branches={branches} />}
             </div>

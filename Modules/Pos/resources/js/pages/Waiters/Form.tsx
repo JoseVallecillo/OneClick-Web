@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/app-layout';
+import { Switch } from '@/components/ui/switch';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 interface Waiter {
@@ -32,64 +33,84 @@ export default function WaiterForm({ waiter }: Props) {
     }
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'POS', href: '/pos/tables' },
-            { title: 'Meseros', href: '/pos/waiters' },
-            { title: isEdit ? waiter!.name : 'Nuevo mesero', href: '#' },
-        ]}>
-            <Head title={isEdit ? `Editar ${waiter!.name}` : 'Nuevo mesero'} />
+        <>
+            <Head title={isEdit ? `Editar ${waiter.name}` : 'Nuevo Mesero'} />
 
-            <div className="mx-auto max-w-md p-6">
-                <h1 className="text-xl font-bold mb-6">
-                    {isEdit ? `Editar mesero` : 'Nuevo mesero'}
-                </h1>
+            <div className="flex h-full flex-1 flex-col gap-6 p-4">
+                <div className="mx-auto w-full max-w-2xl">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{isEdit ? `Editar Mesero` : 'Nuevo Mesero'}</CardTitle>
+                            <CardDescription>
+                                {isEdit 
+                                    ? 'Modifica los datos del mesero en el sistema.' 
+                                    : 'Registra un nuevo mesero para asignarle órdenes y mesas en el Punto de Venta.'}
+                            </CardDescription>
+                        </CardHeader>
 
-                <form onSubmit={submit} className="space-y-5">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="name">Nombre completo</Label>
-                        <Input
-                            id="name"
-                            value={data.name}
-                            onChange={e => setData('name', e.target.value)}
-                            placeholder="Ej. Juan Pérez"
-                            autoFocus
-                        />
-                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                    </div>
+                        <CardContent>
+                            <form onSubmit={submit} className="space-y-6">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Nombre Completo <span className="text-destructive">*</span></Label>
+                                        <Input
+                                            id="name"
+                                            value={data.name}
+                                            onChange={e => setData('name', e.target.value)}
+                                            placeholder="Ej. Juan Pérez"
+                                            autoFocus
+                                            autoComplete="off"
+                                        />
+                                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                                    </div>
 
-                    <div className="space-y-1.5">
-                        <Label htmlFor="code">Código / Abreviatura <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-                        <Input
-                            id="code"
-                            value={data.code}
-                            onChange={e => setData('code', e.target.value)}
-                            placeholder="Ej. JP, M01"
-                            maxLength={20}
-                        />
-                        {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
-                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="code">Código / Abreviatura</Label>
+                                        <Input
+                                            id="code"
+                                            value={data.code}
+                                            onChange={e => setData('code', e.target.value)}
+                                            placeholder="Ej. JP, M01 (Opcional)"
+                                            maxLength={20}
+                                            autoComplete="off"
+                                        />
+                                        {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
+                                        <p className="text-[11px] text-muted-foreground">Opcional. Útil para identificar rápidamente al mesero en tickets o reportes.</p>
+                                    </div>
 
-                    <div className="flex items-center gap-3">
-                        <input
-                            id="active"
-                            type="checkbox"
-                            checked={data.active}
-                            onChange={e => setData('active', e.target.checked)}
-                            className="h-4 w-4 rounded border-input"
-                        />
-                        <Label htmlFor="active" className="cursor-pointer">Mesero activo</Label>
-                    </div>
+                                    <div className="flex items-center space-x-2 pt-2">
+                                        <Switch
+                                            id="active"
+                                            checked={data.active}
+                                            onCheckedChange={checked => setData('active', checked)}
+                                        />
+                                        <Label htmlFor="active" className="cursor-pointer">
+                                            {data.active ? 'Mesero activo (disponible en el POS)' : 'Mesero inactivo (oculto en el POS)'}
+                                        </Label>
+                                    </div>
+                                </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <Button type="submit" disabled={processing} className="flex-1">
-                            {processing ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear mesero'}
-                        </Button>
-                        <Link href="/pos/waiters">
-                            <Button type="button" variant="outline">Cancelar</Button>
-                        </Link>
-                    </div>
-                </form>
+                                <div className="flex items-center gap-3 pt-4 border-t">
+                                    <Link href="/pos/waiters">
+                                        <Button type="button" variant="outline">Cancelar</Button>
+                                    </Link>
+                                    <Button type="submit" disabled={processing}>
+                                        {processing ? 'Guardando…' : isEdit ? 'Guardar Cambios' : 'Registrar Mesero'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+WaiterForm.layout = {
+    breadcrumbs: (props: any) => [
+        { title: 'POS', href: '/pos/tables' },
+        { title: 'Meseros', href: '/pos/waiters' },
+        { title: props.waiter ? props.waiter.name : 'Nuevo Mesero', href: '#' },
+    ],
+};

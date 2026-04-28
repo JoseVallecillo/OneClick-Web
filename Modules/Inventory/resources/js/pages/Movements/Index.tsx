@@ -156,12 +156,38 @@ export default function MovementsIndex({ moves, warehouses, filters }: Props) {
                         <Badge variant="outline" className="text-[10px] text-muted-foreground">Operaciones</Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link href="/inventory/movements/create?type=in">
-                            <Button size="sm" className="gap-1.5 h-9">
-                                <Plus className="h-4 w-4" />
-                                <span>Nueva Operación</span>
-                            </Button>
-                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="sm" className="gap-1.5 h-9">
+                                    <Plus className="h-4 w-4" />
+                                    <span>Nueva Operación</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Tipo de operación
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuRadioGroup value="">
+                                    <DropdownMenuRadioItem value="in" className="text-sm gap-2" onSelect={() => router.get('/inventory/movements/create', { type: 'in' })}>
+                                        <ArrowDownToLine className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Recepción (Entrada)
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="out" className="text-sm gap-2" onSelect={() => router.get('/inventory/movements/create', { type: 'out' })}>
+                                        <ArrowUpFromLine className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Salida (Egreso)
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="adjust" className="text-sm gap-2" onSelect={() => router.get('/inventory/movements/create', { type: 'adjust' })}>
+                                        <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Ajuste de Inventario
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="transfer_out" className="text-sm gap-2" onSelect={() => router.get('/inventory/movements/create', { type: 'transfer_out' })}>
+                                        <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Traslado entre Almacenes
+                                    </DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 

@@ -15,6 +15,16 @@ import {
     UtensilsCrossed,
     X,
 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -73,19 +83,20 @@ interface Props {
     tables: Table[];
     sections: string[];
     activeSection: string;
+    activeView: string;
     activeSession: { id: number; reference: string } | null;
     waiters: Waiter[];
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
-    { icon: LayoutGrid,      label: 'Mesas',    href: '/pos/tables',   active: true  },
-    { icon: BookOpen,        label: 'Menú',     href: '/pos/sessions', active: false },
-    { icon: ChefHat,         label: 'Cocina',   href: '#',             active: false },
-    { icon: Receipt,         label: 'Cuentas',  href: '/pos/sessions', active: false },
-];
 
-function Sidebar() {
+function Sidebar({ activeView }: { activeView: string }) {
+    const NAV_ITEMS = [
+        { icon: LayoutGrid,      label: 'Mesas',    href: '/pos/tables',   id: 'all'  },
+        { icon: ChefHat,         label: 'Cocina',   href: '/pos/tables?view=kitchen', id: 'kitchen' },
+        { icon: Receipt,         label: 'Cuentas',  href: '/pos/tables?view=occupied', id: 'occupied' },
+    ];
+
     return (
         <aside style={{
             width: 72,
@@ -125,11 +136,11 @@ function Sidebar() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: item.active ? C.tealSoft : 'transparent',
-                                color: item.active ? C.teal : C.faint,
+                                background: item.id === activeView ? C.tealSoft : 'transparent',
+                                color: item.id === activeView ? C.teal : C.faint,
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
-                                border: item.active ? `1px solid rgba(20,184,166,0.25)` : '1px solid transparent',
+                                border: item.id === activeView ? `1px solid rgba(20,184,166,0.25)` : '1px solid transparent',
                             }}
                         >
                             <item.icon size={20} />
@@ -355,6 +366,8 @@ interface TableCardProps {
 function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps) {
     const [hovered, setHovered] = useState(false);
     const [selectedWaiter, setSelectedWaiter] = useState('');
+    const [alertState, setAlertState] = useState<{ open: boolean, type: 'alert' | 'confirm', title: string, desc: string, onConfirm?: () => void }>({ open: false, type: 'alert', title: '', desc: '' });
+
     const ring = STATUS_RING[table.status];
     const isCircle = table.shape === 'circle';
 
@@ -380,10 +393,8 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
     }
 
     const handleClick = () => {
-        if (table.status === 'occupied' || table.status === 'pending_food') {
-            if (sessionId) {
-                router.visit(`/pos/sessions/${sessionId}/sell`);
-            }
+        if ((table.status === 'occupied' || table.status === 'pending_food') && table.current_order_id) {
+            router.visit(`/pos/orders/${table.current_order_id}`);
         }
     };
 
@@ -391,6 +402,15 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
         e.stopPropagation();
         if (!sessionId) {
             router.visit('/pos/sessions/open');
+            return;
+        }
+        if (waiters.length > 0 && !selectedWaiter) {
+            setAlertState({
+                open: true,
+                type: 'alert',
+                title: 'Mesero Requerido',
+                desc: 'Debes seleccionar un mesero para poder abrir esta mesa.',
+            });
             return;
         }
         router.post(`/pos/tables/${table.id}/open`, {
@@ -412,7 +432,15 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
 
     const handleRelease = (e: React.MouseEvent) => {
         e.stopPropagation();
-        router.post(`/pos/tables/${table.id}/close`, {}, { preserveScroll: true });
+        setAlertState({
+            open: true,
+            type: 'confirm',
+            title: 'Liberar Mesa',
+            desc: '¿Seguro que deseas liberar esta mesa? Si hay una orden activa sin cobrar, será eliminada / cancelada.',
+            onConfirm: () => {
+                router.post(`/pos/tables/${table.id}/close`, {}, { preserveScroll: true });
+            }
+        });
     };
 
     if (isCircle) {
@@ -492,6 +520,26 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
                         )}
                     </div>
                 </div>
+                
+                <AlertDialog open={alertState.open} onOpenChange={(open) => setAlertState(s => ({ ...s, open }))}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{alertState.title}</AlertDialogTitle>
+                            <AlertDialogDescription>{alertState.desc}</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            {alertState.type === 'confirm' && (
+                                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                            )}
+                            <AlertDialogAction onClick={(e) => {
+                                e.stopPropagation();
+                                if (alertState.onConfirm) alertState.onConfirm();
+                            }}>
+                                Aceptar
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         );
     }
@@ -542,7 +590,7 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
                                 outline: 'none', cursor: 'pointer',
                             }}
                         >
-                            <option value="">Sin mesero</option>
+                            <option value="" disabled>Seleccione mesero...</option>
                             {waiters.map(w => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
                         </select>
                     )}
@@ -603,11 +651,32 @@ function TableCard({ table, sessionId, waiters, onStatusChange }: TableCardProps
                     <InfoRow icon={<Users size={12} color={C.muted} />} label="Mesero" value={table.server_name ?? '—'} valueColor={C.muted} />
 
                     <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                        <ActionBtn label="Ver Pedido" color={C.teal} onClick={handleClick as any} />
+                        <ActionBtn label="Ver Pedido" color={C.teal} onClick={handleGoToOrder} />
+                        <ActionBtn label="Servida" color={C.amber} onClick={(e) => { e.stopPropagation(); onStatusChange(table.id, 'occupied'); }} />
                         <ActionBtn label="Liberar" color={C.red} onClick={handleRelease} />
                     </div>
                 </div>
             )}
+            
+            <AlertDialog open={alertState.open} onOpenChange={(open) => setAlertState(s => ({ ...s, open }))}>
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{alertState.title}</AlertDialogTitle>
+                        <AlertDialogDescription>{alertState.desc}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        {alertState.type === 'confirm' && (
+                            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                        )}
+                        <AlertDialogAction onClick={(e) => {
+                            e.stopPropagation();
+                            if (alertState.onConfirm) alertState.onConfirm();
+                        }}>
+                            Aceptar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -738,7 +807,7 @@ function NoSessionBanner() {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function TableBoard({ tables: initialTables, sections, activeSection: initialSection, activeSession, waiters }: Props) {
+export default function TableBoard({ tables: initialTables, sections, activeSection: initialSection, activeView = 'all', activeSession, waiters }: Props) {
     const [search, setSearch] = useState('');
     const [activeSection, setActiveSection] = useState(initialSection);
     const [tables, setTables] = useState(initialTables);
@@ -768,6 +837,9 @@ export default function TableBoard({ tables: initialTables, sections, activeSect
 
     // Client-side filter
     const filtered = tables.filter((t) => {
+        if (activeView === 'kitchen' && t.status !== 'pending_food') return false;
+        if (activeView === 'occupied' && t.status !== 'occupied') return false;
+
         if (!search) return true;
         const q = search.toLowerCase();
         return (
@@ -811,7 +883,7 @@ export default function TableBoard({ tables: initialTables, sections, activeSect
             `}</style>
 
             <div style={{ display: 'flex', height: '100vh', background: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', overflow: 'hidden' }}>
-                <Sidebar />
+                <Sidebar activeView={activeView} />
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <Header

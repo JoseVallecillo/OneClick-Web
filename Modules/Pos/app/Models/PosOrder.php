@@ -86,7 +86,7 @@ class PosOrder extends Model
 
         $last = static::where('reference', 'like', $prefix . '%')
             ->lockForUpdate()
-            ->orderByRaw('CAST(SUBSTRING(reference, ?) AS UNSIGNED) DESC', [strlen($prefix) + 1])
+            ->orderByRaw('CAST(SUBSTRING(reference FROM ' . (strlen($prefix) + 1) . ') AS INTEGER) DESC')
             ->value('reference');
 
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;

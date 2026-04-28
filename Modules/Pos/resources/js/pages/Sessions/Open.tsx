@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { dashboard } from '@/routes';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, MonitorCheck } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -17,17 +17,21 @@ interface Props {
     warehouses: Warehouse[];
     currencies: Currency[];
     primaryCurrency: { id: number; code: string; symbol: string } | null;
+    users: { id: number; name: string }[];
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function SessionOpen({ warehouses, currencies, primaryCurrency }: Props) {
+export default function SessionOpen({ warehouses, currencies, primaryCurrency, users }: Props) {
+    const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
+
     const { data, setData, post, processing, errors } = useForm({
         name:            '',
         warehouse_id:    '',
         currency_id:     String(primaryCurrency?.id ?? ''),
         opening_balance: '0',
         notes:           '',
+        user_id:         String(auth.user.id),
     });
 
     function submit(e: React.FormEvent) {
@@ -106,6 +110,23 @@ export default function SessionOpen({ warehouses, currencies, primaryCurrency }:
                                     </SelectContent>
                                 </Select>
                                 {errors.currency_id && <p className="text-xs text-destructive">{errors.currency_id}</p>}
+                            </div>
+
+                            {/* User / Cashier */}
+                            <div className="flex flex-col gap-1.5 sm:col-span-2">
+                                <Label>Cajero / Responsable <span className="text-destructive">*</span></Label>
+                                <Select value={data.user_id} onValueChange={(v) => setData('user_id', v)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar usuario…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {users.map((u) => (
+                                            <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">La persona que va a operar y será responsable del dinero de esta caja.</p>
+                                {errors.user_id && <p className="text-xs text-destructive">{errors.user_id}</p>}
                             </div>
 
                             {/* Opening balance */}

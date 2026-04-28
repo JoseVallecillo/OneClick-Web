@@ -9,6 +9,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\ProductCategory;
+use Modules\Inventory\Models\ProductPrice;
+use Modules\Inventory\Models\ProductRecipeLine;
 use Modules\Inventory\Models\UnitOfMeasure;
 use Modules\Accounting\Models\Tax;
 
@@ -79,10 +81,11 @@ class ProductController extends Controller
         $this->requireSubscription();
 
         return Inertia::render('Inventory::Products/Form', [
-            'product'    => null,
-            'categories' => ProductCategory::where('active', true)->orderBy('name')->get(),
-            'uoms'       => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
-            'taxRates'   => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
+            'product'     => null,
+            'categories'  => ProductCategory::where('active', true)->orderBy('name')->get(),
+            'uoms'        => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
+            'taxRates'    => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
+            'ingredients' => Product::where('active', true)->orderBy('name')->with('uom:id,abbreviation')->get(['id', 'name', 'sku', 'uom_id']),
         ]);
     }
 
@@ -112,9 +115,19 @@ class ProductController extends Controller
             'min_stock'   => ['numeric', 'min:0'],
             'image_path'  => ['nullable', 'string', 'max:500'],
             'active'      => ['boolean'],
+            'has_recipe'  => ['boolean'],
+            'recipe'      => ['nullable', 'array'],
+            'recipe.*.ingredient_id' => ['required_with:recipe', 'exists:products,id'],
+            'recipe.*.qty'           => ['required_with:recipe', 'numeric', 'min:0.001'],
+            'extra_prices'           => ['nullable', 'array'],
+            'extra_prices.*.name'    => ['required_with:extra_prices', 'string', 'max:100'],
+            'extra_prices.*.price'   => ['required_with:extra_prices', 'numeric', 'min:0'],
         ]);
 
         $product = Product::create($data);
+
+        $this->syncRecipe($product, $data);
+        $this->syncPrices($product, $data);
 
         return redirect()->route('inventory.products.create')
             ->with('success', "Producto '{$product->name}' creado correctamente. Puedes agregar otro.");
@@ -125,11 +138,14 @@ class ProductController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
+        $product->load(['recipeLines.ingredient:id,name,sku', 'prices']);
+
         return Inertia::render('Inventory::Products/Form', [
-            'product'    => $product,
-            'categories' => ProductCategory::where('active', true)->orderBy('name')->get(),
-            'uoms'       => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
-            'taxRates'   => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
+            'product'     => $product,
+            'categories'  => ProductCategory::where('active', true)->orderBy('name')->get(),
+            'uoms'        => UnitOfMeasure::where('active', true)->orderBy('name')->get(),
+            'taxRates'    => Tax::where('active', true)->whereIn('tax_scope', ['sales', 'all'])->orderBy('name')->get(['id', 'name', 'code', 'type', 'rate']),
+            'ingredients' => Product::where('active', true)->where('id', '!=', $product->id)->orderBy('name')->with('uom:id,abbreviation')->get(['id', 'name', 'sku', 'uom_id']),
         ]);
     }
 
@@ -159,11 +175,51 @@ class ProductController extends Controller
             'min_stock'   => ['numeric', 'min:0'],
             'image_path'  => ['nullable', 'string', 'max:500'],
             'active'      => ['boolean'],
+            'has_recipe'  => ['boolean'],
+            'recipe'      => ['nullable', 'array'],
+            'recipe.*.ingredient_id' => ['required_with:recipe', 'exists:products,id'],
+            'recipe.*.qty'           => ['required_with:recipe', 'numeric', 'min:0.001'],
+            'extra_prices'           => ['nullable', 'array'],
+            'extra_prices.*.name'    => ['required_with:extra_prices', 'string', 'max:100'],
+            'extra_prices.*.price'   => ['required_with:extra_prices', 'numeric', 'min:0'],
         ]);
 
         $product->update($data);
 
-        return back()->with('success', 'Product updated successfully.');
+        $this->syncRecipe($product, $data);
+        $this->syncPrices($product, $data);
+
+        return back()->with('success', 'Producto actualizado correctamente.');
+    }
+
+    private function syncPrices(Product $product, array $data): void
+    {
+        $product->prices()->delete();
+
+        foreach ($data['extra_prices'] ?? [] as $row) {
+            if (empty($row['name'])) continue;
+            ProductPrice::create([
+                'product_id' => $product->id,
+                'name'       => $row['name'],
+                'price'      => $row['price'],
+            ]);
+        }
+    }
+
+    private function syncRecipe(Product $product, array $data): void
+    {
+        $product->recipeLines()->delete();
+
+        if (! empty($data['has_recipe'])) {
+            foreach ($data['recipe'] ?? [] as $line) {
+                if (empty($line['ingredient_id'])) continue;
+                ProductRecipeLine::create([
+                    'product_id'    => $product->id,
+                    'ingredient_id' => $line['ingredient_id'],
+                    'qty'           => $line['qty'],
+                ]);
+            }
+        }
     }
 
     public function destroy(Request $request, Product $product): RedirectResponse

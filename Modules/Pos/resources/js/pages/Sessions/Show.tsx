@@ -1,10 +1,12 @@
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Lock, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Lock, ShoppingCart, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -95,6 +97,11 @@ export default function SessionShow({ session, sales }: Props) {
     const flash = props.flash;
     const sym = session.currency.symbol;
 
+    const [errorModalOpen, setErrorModalOpen] = useState(!!flash?.error);
+    useEffect(() => {
+        setErrorModalOpen(!!flash?.error);
+    }, [flash?.error]);
+
     const { data } = sales;
     const meta = sales.meta ?? { current_page: 1, last_page: 1, from: null, to: null, total: data.length, per_page: 50 };
 
@@ -103,6 +110,22 @@ export default function SessionShow({ session, sales }: Props) {
     return (
         <>
             <Head title={`Sesión ${session.reference}`} />
+
+            <AlertDialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" /> Acción bloqueada
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-foreground mt-2">
+                            {flash?.error}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setErrorModalOpen(false)}>Entendido</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 {flash?.success && (
