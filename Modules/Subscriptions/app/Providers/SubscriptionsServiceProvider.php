@@ -16,6 +16,11 @@ class SubscriptionsServiceProvider extends ModuleServiceProvider
         RouteServiceProvider::class,
     ];
 
+    protected array $commands = [
+        ExpireSubscriptions::class,
+        \Modules\Subscriptions\Console\Commands\PruneSubscriptionsAuditLogs::class,
+    ];
+
     public function boot(): void
     {
         parent::boot();
@@ -24,7 +29,12 @@ class SubscriptionsServiceProvider extends ModuleServiceProvider
         $this->loadViewsFrom(module_path('Subscriptions', 'resources/views'), 'Subscriptions');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([ExpireSubscriptions::class]);
+            $this->commands($this->commands);
         }
+    }
+
+    protected function configureSchedules(\Illuminate\Console\Scheduling\Schedule $schedule): void
+    {
+        $schedule->command('subscriptions:prune-audit-logs')->daily();
     }
 }

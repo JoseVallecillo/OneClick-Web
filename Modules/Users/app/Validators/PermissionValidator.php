@@ -58,51 +58,36 @@ class PermissionValidator
     {
         return [
             // Users module
-            'users.create',
-            'users.read',
-            'users.update',
-            'users.delete',
-            'profiles.create',
-            'profiles.read',
-            'profiles.update',
-            'profiles.delete',
+            'users.create', 'users.read', 'users.update', 'users.delete',
+            'profiles.create', 'profiles.read', 'profiles.update', 'profiles.delete',
             // Governance module
-            'governance.rules.create',
-            'governance.rules.read',
-            'governance.rules.update',
-            'governance.rules.delete',
-            'governance.validators.create',
-            'governance.validators.read',
-            'governance.validators.update',
-            'governance.validators.delete',
+            'governance.rules.create', 'governance.rules.read', 'governance.rules.update', 'governance.rules.delete',
+            'governance.validators.create', 'governance.validators.read', 'governance.validators.update', 'governance.validators.delete',
             // Accounting module
-            'accounting.accounts.create',
-            'accounting.accounts.read',
-            'accounting.accounts.update',
-            'accounting.accounts.delete',
-            'accounting.movements.create',
-            'accounting.movements.post',
-            'accounting.movements.reverse',
-            'accounting.budgets.create',
-            'accounting.budgets.update',
-            'accounting.periods.close',
+            'accounting.accounts.create', 'accounting.accounts.read', 'accounting.accounts.update', 'accounting.accounts.delete',
+            'accounting.movements.create', 'accounting.movements.post', 'accounting.movements.reverse',
+            'accounting.budgets.create', 'accounting.budgets.update', 'accounting.periods.close',
             // POS module
-            'pos.sessions.open',
-            'pos.sessions.close',
-            'pos.sales.create',
-            'pos.sales.cancel',
-            'pos.sales.refund',
-            'pos.discounts.apply',
-            'pos.reports.view',
+            'pos.sessions.open', 'pos.sessions.close', 'pos.sales.create', 'pos.sales.cancel', 'pos.sales.refund',
+            'pos.discounts.apply', 'pos.reports.view',
             // Inventory module
-            'inventory.products.create',
-            'inventory.products.read',
-            'inventory.products.update',
-            'inventory.products.delete',
-            'inventory.stock.adjust',
-            'inventory.transfers.create',
-            'inventory.transfers.approve',
-            'inventory.counts.execute',
+            'inventory.products.create', 'inventory.products.read', 'inventory.products.update', 'inventory.products.delete',
+            'inventory.stock.adjust', 'inventory.transfers.create', 'inventory.transfers.approve', 'inventory.counts.execute',
+            // Sales module
+            'sales.orders.create', 'sales.orders.read', 'sales.orders.update', 'sales.orders.cancel',
+            'sales.quotes.create', 'sales.quotes.approve', 'sales.invoices.create', 'sales.shipments.create',
+            // Purchases module
+            'purchases.orders.create', 'purchases.orders.read', 'purchases.orders.approve', 'purchases.orders.cancel',
+            'purchases.quotes.evaluate', 'purchases.receipts.create', 'purchases.returns.create',
+            // Contacts module
+            'contacts.create', 'contacts.read', 'contacts.update', 'contacts.delete',
+            'contacts.merge', 'contacts.import', 'contacts.export',
+            // Subscriptions module
+            'subscriptions.manage', 'subscriptions.upgrade', 'subscriptions.downgrade', 'subscriptions.cancel',
+            'subscriptions.payments.view', 'subscriptions.invoices.view',
+            // Settings module
+            'settings.company.update', 'settings.currencies.manage', 'settings.taxes.manage',
+            'settings.warehouses.manage', 'settings.users.manage', 'settings.integrations.manage',
         ];
     }
 }

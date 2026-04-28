@@ -2,6 +2,8 @@
 
 namespace Modules\Settings\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
+use Modules\Settings\Console\Commands\PruneSettingsAuditLogs;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class SettingsServiceProvider extends ModuleServiceProvider
@@ -14,4 +16,13 @@ class SettingsServiceProvider extends ModuleServiceProvider
         EventServiceProvider::class,
         RouteServiceProvider::class,
     ];
+
+    protected array $commands = [
+        PruneSettingsAuditLogs::class,
+    ];
+
+    protected function configureSchedules(Schedule $schedule): void
+    {
+        $schedule->command('settings:prune-audit-logs')->daily();
+    }
 }

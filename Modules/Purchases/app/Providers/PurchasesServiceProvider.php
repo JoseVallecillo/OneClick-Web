@@ -2,6 +2,8 @@
 
 namespace Modules\Purchases\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
+use Modules\Purchases\Console\Commands\PrunePurchasesAuditLogs;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class PurchasesServiceProvider extends ModuleServiceProvider
@@ -14,4 +16,13 @@ class PurchasesServiceProvider extends ModuleServiceProvider
         EventServiceProvider::class,
         RouteServiceProvider::class,
     ];
+
+    protected array $commands = [
+        PrunePurchasesAuditLogs::class,
+    ];
+
+    protected function configureSchedules(Schedule $schedule): void
+    {
+        $schedule->command('purchases:prune-audit-logs')->daily();
+    }
 }
