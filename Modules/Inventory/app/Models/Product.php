@@ -28,14 +28,20 @@ class Product extends Model
         'image_path',
         'active',
         'has_recipe',
+        'is_clothing',
+        'material',
+        'care_instructions',
+        'size_guide',
     ];
 
     protected $casts = [
-        'cost'       => 'decimal:4',
-        'price'      => 'decimal:4',
-        'min_stock'  => 'decimal:2',
-        'active'     => 'boolean',
-        'has_recipe' => 'boolean',
+        'cost'           => 'decimal:4',
+        'price'          => 'decimal:4',
+        'min_stock'      => 'decimal:2',
+        'active'         => 'boolean',
+        'has_recipe'     => 'boolean',
+        'is_clothing'    => 'boolean',
+        'size_guide'     => 'json',
     ];
 
     // -------------------------------------------------------------------------
