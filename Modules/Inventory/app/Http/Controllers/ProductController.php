@@ -13,6 +13,8 @@ use Modules\Inventory\Models\ProductPrice;
 use Modules\Inventory\Models\ProductRecipeLine;
 use Modules\Inventory\Models\UnitOfMeasure;
 use Modules\Accounting\Models\Tax;
+use Modules\Inventory\Services\InventoryAuditService;
+use Modules\Inventory\Services\InventoryPermissionService;
 
 class ProductController extends Controller
 {
@@ -93,6 +95,7 @@ class ProductController extends Controller
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
+        InventoryPermissionService::ensurePermission($request->user(), 'inventory.products.create');
 
         $request->merge([
             'category_id' => $request->category_id === '__none__' ? null : $request->category_id,
@@ -128,6 +131,8 @@ class ProductController extends Controller
 
         $this->syncRecipe($product, $data);
         $this->syncPrices($product, $data);
+
+        InventoryAuditService::logProductCreated($data, $request->user(), $request);
 
         return redirect()->route('inventory.products.create')
             ->with('success', "Producto '{$product->name}' creado correctamente. Puedes agregar otro.");

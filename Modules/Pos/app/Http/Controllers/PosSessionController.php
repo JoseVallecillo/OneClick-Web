@@ -10,6 +10,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Inventory\Models\Warehouse;
 use Modules\Pos\Models\PosSession;
+use Modules\Pos\Services\PosAuditService;
+use Modules\Pos\Services\PosPermissionService;
 use Modules\Settings\Models\Currency;
 
 class PosSessionController extends Controller
@@ -67,6 +69,7 @@ class PosSessionController extends Controller
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
+        PosPermissionService::ensurePermission($request->user(), 'pos.sessions.open');
 
         $data = $request->validate([
             'name'            => ['nullable', 'string', 'max:100'],
@@ -90,6 +93,8 @@ class PosSessionController extends Controller
                 'created_by'      => $data['user_id'] ?? \Illuminate\Support\Facades\Auth::id(),
             ]);
         });
+
+        PosAuditService::logSessionOpened($session->id, $data, $request->user(), $request);
 
         return redirect()->route('pos.sell', $session)
             ->with('success', "Sesión {$session->reference} abierta. ¡Listo para vender!");
@@ -145,6 +150,7 @@ class PosSessionController extends Controller
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
+        PosPermissionService::ensurePermission($request->user(), 'pos.sessions.close');
 
         abort_if($session->isClosed(), 403, 'Esta sesión ya está cerrada.');
 
@@ -165,6 +171,8 @@ class PosSessionController extends Controller
             'closed_at'       => now(),
             'notes'           => $data['notes'] ?? $session->notes,
         ]);
+
+        PosAuditService::logSessionClosed($session->id, $data['closing_balance'], $request->user(), $request);
 
         return redirect()->route('pos.sessions.show', $session)
             ->with('success', "Sesión {$session->reference} cerrada correctamente.");

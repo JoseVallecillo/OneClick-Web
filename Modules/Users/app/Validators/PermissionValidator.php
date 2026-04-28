@@ -57,6 +57,7 @@ class PermissionValidator
     private static function getDefaultPermissions(): array
     {
         return [
+            // Users module
             'users.create',
             'users.read',
             'users.update',
@@ -65,6 +66,7 @@ class PermissionValidator
             'profiles.read',
             'profiles.update',
             'profiles.delete',
+            // Governance module
             'governance.rules.create',
             'governance.rules.read',
             'governance.rules.update',
@@ -73,6 +75,34 @@ class PermissionValidator
             'governance.validators.read',
             'governance.validators.update',
             'governance.validators.delete',
+            // Accounting module
+            'accounting.accounts.create',
+            'accounting.accounts.read',
+            'accounting.accounts.update',
+            'accounting.accounts.delete',
+            'accounting.movements.create',
+            'accounting.movements.post',
+            'accounting.movements.reverse',
+            'accounting.budgets.create',
+            'accounting.budgets.update',
+            'accounting.periods.close',
+            // POS module
+            'pos.sessions.open',
+            'pos.sessions.close',
+            'pos.sales.create',
+            'pos.sales.cancel',
+            'pos.sales.refund',
+            'pos.discounts.apply',
+            'pos.reports.view',
+            // Inventory module
+            'inventory.products.create',
+            'inventory.products.read',
+            'inventory.products.update',
+            'inventory.products.delete',
+            'inventory.stock.adjust',
+            'inventory.transfers.create',
+            'inventory.transfers.approve',
+            'inventory.counts.execute',
         ];
     }
 }

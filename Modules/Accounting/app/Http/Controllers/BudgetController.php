@@ -10,6 +10,8 @@ use Inertia\Response;
 use Modules\Accounting\Models\Account;
 use Modules\Accounting\Models\Budget;
 use Modules\Accounting\Models\BudgetLine;
+use Modules\Accounting\Services\AccountingAuditService;
+use Modules\Accounting\Services\AccountingPermissionService;
 
 class BudgetController extends Controller
 {
@@ -46,6 +48,7 @@ class BudgetController extends Controller
     {
         $this->requireAdmin($request);
         $this->requireSubscription();
+        AccountingPermissionService::ensurePermission($request->user(), 'accounting.budgets.create');
 
         $data = $request->validate([
             'name'      => ['required', 'string', 'max:150'],
@@ -73,6 +76,8 @@ class BudgetController extends Controller
                 ]);
             }
         }
+
+        AccountingAuditService::logBudgetUpdate($budget->id, [], $data, $request->user(), $request);
 
         return redirect()->route('accounting.budgets.index')
             ->with('success', "Presupuesto {$budget->name} creado.");
