@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Accounting\Http\Controllers\AccountController;
+use Modules\Accounting\Http\Controllers\AnalyticalAccountController;
 use Modules\Accounting\Http\Controllers\CaiConfigController;
 use Modules\Accounting\Http\Controllers\JournalController;
 use Modules\Accounting\Http\Controllers\MoveController;
@@ -21,6 +22,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('accounting/accounts',             [AccountController::class, 'store'])->name('accounting.accounts.store');
     Route::get('accounting/accounts/{account}/edit', [AccountController::class, 'edit'])->name('accounting.accounts.edit');
     Route::patch('accounting/accounts/{account}',  [AccountController::class, 'update'])->name('accounting.accounts.update');
+
+    // ── Cuentas Analíticas ─────────────────────────────────────────────────────
+    Route::get('accounting/analytical-accounts',                      [AnalyticalAccountController::class, 'index'])->name('accounting.analytical-accounts.index');
+    Route::get('accounting/analytical-accounts/create',               [AnalyticalAccountController::class, 'create'])->name('accounting.analytical-accounts.create');
+    Route::post('accounting/analytical-accounts',                     [AnalyticalAccountController::class, 'store'])->name('accounting.analytical-accounts.store');
+    Route::get('accounting/analytical-accounts/{analyticalAccount}/edit', [AnalyticalAccountController::class, 'edit'])->name('accounting.analytical-accounts.edit');
+    Route::patch('accounting/analytical-accounts/{analyticalAccount}', [AnalyticalAccountController::class, 'update'])->name('accounting.analytical-accounts.update');
 
     // ── Diarios ────────────────────────────────────────────────────────────────
     Route::get('accounting/journals',              [JournalController::class, 'index'])->name('accounting.journals.index');
@@ -67,6 +75,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounting/cai/{caiConfig}',            [CaiConfigController::class, 'update'])->name('accounting.cai.update');
 
     // ── Reportes ───────────────────────────────────────────────────────────────
-    Route::get('accounting/reports/trial-balance',  [ReportController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
-    Route::get('accounting/reports/general-ledger', [ReportController::class, 'generalLedger'])->name('accounting.reports.general-ledger');
+    Route::get('accounting/reports/trial-balance',      [ReportController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
+    Route::get('accounting/reports/general-ledger',     [ReportController::class, 'generalLedger'])->name('accounting.reports.general-ledger');
+    Route::get('accounting/reports/analytical-balance', [ReportController::class, 'analyticalBalance'])->name('accounting.reports.analytical-balance');
+    Route::get('accounting/reports/analytical-ledger',  [ReportController::class, 'analyticalLedger'])->name('accounting.reports.analytical-ledger');
 });

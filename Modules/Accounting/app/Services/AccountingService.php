@@ -178,4 +178,89 @@ class AccountingService
             ];
         })->values()->toArray();
     }
+
+    /**
+     * Compute balance by analytical account.
+     */
+    public function analyticalBalance(?string $dateFrom = null, ?string $dateTo = null): \Illuminate\Support\Collection
+    {
+        $query = MoveLine::query()
+            ->join('account_moves', 'account_moves.id', '=', 'account_move_lines.move_id')
+            ->leftJoin('account_analytical_accounts', 'account_analytical_accounts.id', '=', 'account_move_lines.analytical_account_id')
+            ->leftJoin('account_accounts', 'account_accounts.id', '=', 'account_analytical_accounts.account_id')
+            ->where('account_moves.state', 'posted')
+            ->whereNotNull('account_move_lines.analytical_account_id')
+            ->select(
+                'account_analytical_accounts.id as analytical_account_id',
+                'account_analytical_accounts.code',
+                'account_analytical_accounts.name',
+                'account_accounts.code as account_code',
+                'account_accounts.name as account_name',
+                DB::raw('SUM(account_move_lines.debit) as total_debit'),
+                DB::raw('SUM(account_move_lines.credit) as total_credit')
+            )
+            ->groupBy('account_analytical_accounts.id', 'account_analytical_accounts.code', 'account_analytical_accounts.name', 'account_accounts.code', 'account_accounts.name')
+            ->orderBy('account_analytical_accounts.code');
+
+        if ($dateFrom) {
+            $query->where('account_moves.date', '>=', $dateFrom);
+        }
+
+        if ($dateTo) {
+            $query->where('account_moves.date', '<=', $dateTo);
+        }
+
+        return $query->get()->map(function ($row) {
+            $debit  = (float) $row->total_debit;
+            $credit = (float) $row->total_credit;
+            $balance = $debit - $credit;
+
+            return [
+                'analytical_account_id' => $row->analytical_account_id,
+                'code'                  => $row->code,
+                'name'                  => $row->name,
+                'account_code'          => $row->account_code,
+                'account_name'          => $row->account_name,
+                'total_debit'           => $debit,
+                'total_credit'          => $credit,
+                'balance'               => $balance,
+            ];
+        });
+    }
+
+    /**
+     * Generate ledger entries for a specific analytical account.
+     */
+    public function analyticalLedger(int $analyticalAccountId, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        $query = MoveLine::with(['move.journal', 'partner', 'analyticalAccount'])
+            ->where('analytical_account_id', $analyticalAccountId)
+            ->whereHas('move', fn ($q) => $q->where('state', 'posted'));
+
+        if ($dateFrom) {
+            $query->whereHas('move', fn ($q) => $q->where('date', '>=', $dateFrom));
+        }
+
+        if ($dateTo) {
+            $query->whereHas('move', fn ($q) => $q->where('date', '<=', $dateTo));
+        }
+
+        $lines   = $query->get()->sortBy('move.date');
+        $running = 0.0;
+
+        return $lines->map(function ($line) use (&$running) {
+            $running += (float) $line->debit - (float) $line->credit;
+
+            return [
+                'date'      => $line->move->date->toDateString(),
+                'reference' => $line->move->reference,
+                'journal'   => $line->move->journal->name ?? '—',
+                'narration' => $line->name ?? $line->move->narration,
+                'partner'   => $line->partner?->name,
+                'debit'     => (float) $line->debit,
+                'credit'    => (float) $line->credit,
+                'balance'   => $running,
+            ];
+        })->values()->toArray();
+    }
 }

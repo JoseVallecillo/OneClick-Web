@@ -14,6 +14,7 @@ class MoveLine extends Model
     protected $fillable = [
         'move_id',
         'account_id',
+        'analytical_account_id',
         'partner_id',
         'tax_id',
         'name',
@@ -60,6 +61,11 @@ class MoveLine extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_id');
+    }
+
+    public function analyticalAccount(): BelongsTo
+    {
+        return $this->belongsTo(AnalyticalAccount::class, 'analytical_account_id');
     }
 
     // -------------------------------------------------------------------------
