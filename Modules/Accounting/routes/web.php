@@ -3,12 +3,17 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Accounting\Http\Controllers\AccountController;
 use Modules\Accounting\Http\Controllers\AnalyticalAccountController;
+use Modules\Accounting\Http\Controllers\AccountingPeriodController;
+use Modules\Accounting\Http\Controllers\BankReconciliationController;
+use Modules\Accounting\Http\Controllers\BudgetController;
 use Modules\Accounting\Http\Controllers\CaiConfigController;
+use Modules\Accounting\Http\Controllers\FixedAssetController;
 use Modules\Accounting\Http\Controllers\JournalController;
 use Modules\Accounting\Http\Controllers\MoveController;
 use Modules\Accounting\Http\Controllers\ReportController;
 use Modules\Accounting\Http\Controllers\CurrencyController;
 use Modules\Accounting\Http\Controllers\TaxController;
+use Modules\Accounting\Http\Controllers\WithholdingController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -66,6 +71,42 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounting/taxes/{tax}',         [TaxController::class, 'update'])->name('accounting.taxes.update');
     Route::delete('accounting/taxes/{tax}',        [TaxController::class, 'destroy'])->name('accounting.taxes.destroy');
 
+    // ── Retenciones (Honduras) ─────────────────────────────────────────────────
+    Route::get('accounting/withholdings',                 [WithholdingController::class, 'index'])->name('accounting.withholdings.index');
+    Route::get('accounting/withholdings/create',          [WithholdingController::class, 'create'])->name('accounting.withholdings.create');
+    Route::post('accounting/withholdings',                [WithholdingController::class, 'store'])->name('accounting.withholdings.store');
+    Route::get('accounting/withholdings/{withholding}/edit', [WithholdingController::class, 'edit'])->name('accounting.withholdings.edit');
+    Route::patch('accounting/withholdings/{withholding}', [WithholdingController::class, 'update'])->name('accounting.withholdings.update');
+
+    // ── Períodos Contables ─────────────────────────────────────────────────────
+    Route::get('accounting/periods',                 [AccountingPeriodController::class, 'index'])->name('accounting.periods.index');
+    Route::get('accounting/periods/create',          [AccountingPeriodController::class, 'create'])->name('accounting.periods.create');
+    Route::post('accounting/periods',                [AccountingPeriodController::class, 'store'])->name('accounting.periods.store');
+    Route::get('accounting/periods/{period}/edit',   [AccountingPeriodController::class, 'edit'])->name('accounting.periods.edit');
+    Route::patch('accounting/periods/{period}',      [AccountingPeriodController::class, 'update'])->name('accounting.periods.update');
+    Route::post('accounting/periods/{period}/close', [AccountingPeriodController::class, 'close'])->name('accounting.periods.close');
+
+    // ── Activos Fijos ──────────────────────────────────────────────────────────
+    Route::get('accounting/fixed-assets',                [FixedAssetController::class, 'index'])->name('accounting.fixed-assets.index');
+    Route::get('accounting/fixed-assets/create',         [FixedAssetController::class, 'create'])->name('accounting.fixed-assets.create');
+    Route::post('accounting/fixed-assets',               [FixedAssetController::class, 'store'])->name('accounting.fixed-assets.store');
+    Route::get('accounting/fixed-assets/{fixedAsset}/edit', [FixedAssetController::class, 'edit'])->name('accounting.fixed-assets.edit');
+    Route::patch('accounting/fixed-assets/{fixedAsset}', [FixedAssetController::class, 'update'])->name('accounting.fixed-assets.update');
+
+    // ── Conciliación Bancaria ──────────────────────────────────────────────────
+    Route::get('accounting/bank-reconciliations',              [BankReconciliationController::class, 'index'])->name('accounting.bank-reconciliations.index');
+    Route::get('accounting/bank-reconciliations/create',       [BankReconciliationController::class, 'create'])->name('accounting.bank-reconciliations.create');
+    Route::post('accounting/bank-reconciliations',             [BankReconciliationController::class, 'store'])->name('accounting.bank-reconciliations.store');
+    Route::get('accounting/bank-reconciliations/{reconciliation}', [BankReconciliationController::class, 'show'])->name('accounting.bank-reconciliations.show');
+    Route::post('accounting/bank-reconciliations/{reconciliation}/reconcile', [BankReconciliationController::class, 'reconcile'])->name('accounting.bank-reconciliations.reconcile');
+
+    // ── Presupuestos ───────────────────────────────────────────────────────────
+    Route::get('accounting/budgets',                 [BudgetController::class, 'index'])->name('accounting.budgets.index');
+    Route::get('accounting/budgets/create',          [BudgetController::class, 'create'])->name('accounting.budgets.create');
+    Route::post('accounting/budgets',                [BudgetController::class, 'store'])->name('accounting.budgets.store');
+    Route::get('accounting/budgets/{budget}',        [BudgetController::class, 'show'])->name('accounting.budgets.show');
+    Route::post('accounting/budgets/{budget}/approve', [BudgetController::class, 'approve'])->name('accounting.budgets.approve');
+
     // ── Configuración CAI (Honduras SAR) ──────────────────────────────────────
     Route::get('accounting/cai',                          [CaiConfigController::class, 'index'])->name('accounting.cai.index');
     Route::get('accounting/cai/create',                   [CaiConfigController::class, 'create'])->name('accounting.cai.create');
@@ -75,8 +116,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounting/cai/{caiConfig}',            [CaiConfigController::class, 'update'])->name('accounting.cai.update');
 
     // ── Reportes ───────────────────────────────────────────────────────────────
-    Route::get('accounting/reports/trial-balance',      [ReportController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
-    Route::get('accounting/reports/general-ledger',     [ReportController::class, 'generalLedger'])->name('accounting.reports.general-ledger');
-    Route::get('accounting/reports/analytical-balance', [ReportController::class, 'analyticalBalance'])->name('accounting.reports.analytical-balance');
-    Route::get('accounting/reports/analytical-ledger',  [ReportController::class, 'analyticalLedger'])->name('accounting.reports.analytical-ledger');
+    Route::get('accounting/reports/trial-balance',        [ReportController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
+    Route::get('accounting/reports/general-ledger',       [ReportController::class, 'generalLedger'])->name('accounting.reports.general-ledger');
+    Route::get('accounting/reports/analytical-balance',   [ReportController::class, 'analyticalBalance'])->name('accounting.reports.analytical-balance');
+    Route::get('accounting/reports/analytical-ledger',    [ReportController::class, 'analyticalLedger'])->name('accounting.reports.analytical-ledger');
+    Route::get('accounting/reports/balance-sheet',        [ReportController::class, 'balanceSheet'])->name('accounting.reports.balance-sheet');
+    Route::get('accounting/reports/income-statement',     [ReportController::class, 'incomeStatement'])->name('accounting.reports.income-statement');
+    Route::get('accounting/reports/fixed-assets',        [ReportController::class, 'fixedAssetsReport'])->name('accounting.reports.fixed-assets');
+    Route::get('accounting/reports/budget-vs-actual',     [ReportController::class, 'budgetVsActual'])->name('accounting.reports.budget-vs-actual');
 });
