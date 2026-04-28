@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\Governance\Models\GovernanceAuditLog;
 use Modules\Governance\Models\GovernanceAuthRequest;
 use Modules\Governance\Models\GovernanceFieldValidator;
 use Modules\Governance\Models\UiGovernanceRule;
@@ -23,6 +24,9 @@ class GovernanceController extends Controller
 
     /** PIN lockout resets after this many minutes. */
     private const PIN_LOCKOUT_TTL_MINUTES = 15;
+
+    /** Authorization check rate limit per token (requests per minute). */
+    private const AUTH_CHECK_RATE_LIMIT = 60;
 
     public function index(Request $request): Response
     {
@@ -57,8 +61,10 @@ class GovernanceController extends Controller
     {
         $this->requireAdmin($request);
 
+        $enabledModules = collect(Module::allEnabled())->map(fn ($m) => $m->getName())->values()->toArray();
+
         $validated = $request->validate([
-            'module_name'        => 'required|string|max:100',
+            'module_name'        => ['required', 'string', 'max:100', 'in:' . implode(',', $enabledModules)],
             'element_identifier' => 'required|string|max:200',
             'action_type'        => 'required|in:hide,pin,authorize',
             'user_role'          => 'nullable|string|in:admin,user',
@@ -150,6 +156,16 @@ class GovernanceController extends Controller
         if (hash_equals((string) $rule->pin_code, $validated['pin'])) {
             Cache::forget($cacheKey);
 
+            GovernanceAuditLog::create([
+                'user_id'            => $user->id,
+                'action'             => 'pin_success',
+                'module_name'        => $validated['module_name'],
+                'element_identifier' => $validated['element_identifier'],
+                'details'            => ['user_role' => $userRole],
+                'ip_address'         => request()->ip(),
+                'created_at'         => now(),
+            ]);
+
             return response()->json([
                 'valid'        => true,
                 'locked'       => false,
@@ -157,9 +173,22 @@ class GovernanceController extends Controller
             ]);
         }
 
-        // Wrong PIN — increment counter
         $newAttempts = $attempts + 1;
         Cache::put($cacheKey, $newAttempts, now()->addMinutes(self::PIN_LOCKOUT_TTL_MINUTES));
+
+        GovernanceAuditLog::create([
+            'user_id'            => $user->id,
+            'action'             => 'pin_failure',
+            'module_name'        => $validated['module_name'],
+            'element_identifier' => $validated['element_identifier'],
+            'details'            => [
+                'user_role'    => $userRole,
+                'attempt'      => $newAttempts,
+                'max_attempts' => $maxAttempts,
+            ],
+            'ip_address'         => request()->ip(),
+            'created_at'         => now(),
+        ]);
 
         return response()->json([
             'valid'        => false,
@@ -197,9 +226,19 @@ class GovernanceController extends Controller
 
     /**
      * Poll endpoint — auto-expires if time is up, returns current status.
+     * Rate limited to prevent brute force attacks.
      */
     public function checkAuthorization(string $token): JsonResponse
     {
+        $cacheKey = "governance:check_auth_attempts:{$token}";
+        $attempts = (int) Cache::get($cacheKey, 0);
+
+        if ($attempts >= self::AUTH_CHECK_RATE_LIMIT) {
+            return response()->json(['status' => 'rate_limited'], 429);
+        }
+
+        Cache::put($cacheKey, $attempts + 1, now()->addMinutes(1));
+
         $authRequest = GovernanceAuthRequest::where('token', $token)->firstOrFail();
 
         if ($authRequest->status === 'pending' && $authRequest->isExpired()) {
@@ -221,6 +260,20 @@ class GovernanceController extends Controller
 
         $authRequest->update(['status' => 'approved']);
 
+        GovernanceAuditLog::create([
+            'user_id'            => $request->user()->id,
+            'action'             => 'approve_authorization',
+            'module_name'        => $authRequest->module_name,
+            'element_identifier' => $authRequest->element_identifier,
+            'token'              => $token,
+            'details'            => [
+                'approved_by_email' => $request->user()->email,
+                'requested_by'      => $authRequest->user_id,
+            ],
+            'ip_address'         => $request->ip(),
+            'created_at'         => now(),
+        ]);
+
         return back()->with('success', 'Authorization approved.');
     }
 
@@ -231,6 +284,20 @@ class GovernanceController extends Controller
         $authRequest = GovernanceAuthRequest::where('token', $token)->firstOrFail();
         $authRequest->update(['status' => 'rejected']);
 
+        GovernanceAuditLog::create([
+            'user_id'            => $request->user()->id,
+            'action'             => 'reject_authorization',
+            'module_name'        => $authRequest->module_name,
+            'element_identifier' => $authRequest->element_identifier,
+            'token'              => $token,
+            'details'            => [
+                'rejected_by_email' => $request->user()->email,
+                'requested_by'      => $authRequest->user_id,
+            ],
+            'ip_address'         => $request->ip(),
+            'created_at'         => now(),
+        ]);
+
         return back()->with('success', 'Authorization rejected.');
     }
 
@@ -240,8 +307,10 @@ class GovernanceController extends Controller
     {
         $this->requireAdmin($request);
 
+        $enabledModules = collect(Module::allEnabled())->map(fn ($m) => $m->getName())->values()->toArray();
+
         $validated = $request->validate([
-            'module_name'      => 'required|string|max:100',
+            'module_name'      => ['required', 'string', 'max:100', 'in:' . implode(',', $enabledModules)],
             'field_identifier' => 'required|string|max:200',
             'validation_type'  => 'required|in:numeric,alpha,alpha-dash,alphanumeric',
             'user_role'        => 'nullable|string|in:admin,user',
@@ -282,10 +351,17 @@ class GovernanceController extends Controller
     /**
      * Discovery endpoint: returns models and their fields for a given module.
      * Used by the dynamic selects in the Governance panel.
+     * Results are cached for 24 hours.
      */
     public function getModuleElements(Request $request, string $moduleName): JsonResponse
     {
         $this->requireAdmin($request);
+
+        $cacheKey = "governance:module_elements:{$moduleName}";
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            return response()->json(['models' => $cached]);
+        }
 
         $module = Module::find($moduleName);
         if (!$module) {
@@ -294,7 +370,6 @@ class GovernanceController extends Controller
 
         $modelsPath = $module->getPath() . '/app/Models';
         if (!file_exists($modelsPath)) {
-            // Some modules might use 'Models' instead of 'app/Models' if follow different structures
             $modelsPath = $module->getPath() . '/Models';
         }
 
@@ -311,12 +386,10 @@ class GovernanceController extends Controller
             }
 
             $modelName = str_replace('.php', '', $file);
-            // Default namespace convention in this project
             $className = "Modules\\{$moduleName}\\Models\\{$modelName}";
 
             if (class_exists($className)) {
                 try {
-                    // We instantiate to get the table name (respecting customized $table property)
                     $model = new $className;
                     $table = $model->getTable();
                     $columns = Schema::getColumnListing($table);
@@ -326,6 +399,8 @@ class GovernanceController extends Controller
                 }
             }
         }
+
+        Cache::put($cacheKey, $discovered, now()->addHours(24));
 
         return response()->json(['models' => $discovered]);
     }
