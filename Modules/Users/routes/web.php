@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('users/{user}/profile', [UsersController::class, 'assignProfile'])->name('users.assign-profile');
     Route::patch('users/{user}/exceptions', [UsersController::class, 'updateExceptions'])->name('users.update-exceptions');
     Route::delete('users/{user}', [UsersController::class, 'deleteUser'])->name('users.delete');
+    Route::post('users/{userId}/restore', [UsersController::class, 'restoreUser'])->name('users.restore');
 
     // ── Profile management ─────────────────────────────────────────────────────
     Route::post('users/profiles', [UsersController::class, 'storeProfile'])->name('users.profiles.store');

@@ -7,15 +7,21 @@ use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Settings\Models\Company;
 use Modules\Subscriptions\Services\SubscriptionService;
+use Modules\Users\Services\UserAuditService;
+use Modules\Users\Validators\PermissionValidator;
 
 class UsersController extends Controller
 {
+    /** User creation rate limit (requests per hour). */
+    private const USER_CREATION_RATE_LIMIT = 50;
+
     public function index(Request $request): Response
     {
         $this->requireAdmin($request);
@@ -29,9 +35,12 @@ class UsersController extends Controller
             ->orderBy('name')
             ->get();
 
+        $deletedCount = User::onlyTrashed()->count();
+
         return Inertia::render('Users::Index', [
-            'users'    => $users,
-            'profiles' => $profiles,
+            'users'        => $users,
+            'profiles'     => $profiles,
+            'deletedCount' => $deletedCount,
         ]);
     }
 
@@ -41,18 +50,28 @@ class UsersController extends Controller
     {
         $this->requireAdmin($request);
 
-        // Verificar límite de usuarios según el plan de suscripción activo
+        $cacheKey = "users:creation_attempts:{$request->user()->id}";
+        $attempts = (int) Cache::get($cacheKey, 0);
+
+        if ($attempts >= self::USER_CREATION_RATE_LIMIT) {
+            return back()->withErrors([
+                'email' => 'Has alcanzado el límite de creación de usuarios. Intenta más tarde.',
+            ]);
+        }
+
         if (class_exists(SubscriptionService::class) && class_exists(Company::class)) {
             $company = Company::first();
             if ($company) {
-                $canAdd = rescue(
-                    fn () => app(SubscriptionService::class)->canAddUser($company),
-                    true, // Si el módulo falla, no bloqueamos
-                );
-
-                if (! $canAdd) {
+                try {
+                    $canAdd = app(SubscriptionService::class)->canAddUser($company);
+                    if (!$canAdd) {
+                        return back()->withErrors([
+                            'email' => 'Has alcanzado el límite de usuarios permitidos por tu plan de suscripción actual.',
+                        ]);
+                    }
+                } catch (\Exception $e) {
                     return back()->withErrors([
-                        'email' => 'Has alcanzado el límite de usuarios permitidos por tu plan de suscripción actual.',
+                        'email' => 'Error al verificar límite de usuarios. Contacta al soporte.',
                     ]);
                 }
             }
@@ -65,13 +84,17 @@ class UsersController extends Controller
             'role'     => 'required|in:admin,user',
         ]);
 
-        User::create([
+        $user = User::create([
             'name'              => $validated['name'],
             'email'             => $validated['email'],
             'password'          => Hash::make($validated['password']),
             'role'              => $validated['role'],
             'email_verified_at' => now(),
         ]);
+
+        UserAuditService::logUserCreation($user, $request->user(), $request);
+
+        Cache::put($cacheKey, $attempts + 1, now()->addHours(1));
 
         return back()->with('success', 'Usuario creado correctamente.');
     }
@@ -85,7 +108,10 @@ class UsersController extends Controller
             'role' => 'required|in:admin,user',
         ]);
 
+        $oldRole = $user->role;
         $user->update(['role' => $validated['role']]);
+
+        UserAuditService::logRoleUpdate($user, $oldRole, $validated['role'], $request->user(), $request);
 
         return back()->with('success', 'Rol actualizado correctamente.');
     }
@@ -98,7 +124,10 @@ class UsersController extends Controller
             'profile_id' => 'nullable|exists:profiles,id',
         ]);
 
+        $oldProfileId = $user->profile_id;
         $user->update(['profile_id' => $validated['profile_id']]);
+
+        UserAuditService::logProfileAssignment($user, $oldProfileId, $validated['profile_id'], $request->user(), $request);
 
         return back()->with('success', 'Perfil asignado correctamente.');
     }
@@ -112,7 +141,18 @@ class UsersController extends Controller
             'permissions.*' => 'boolean',
         ]);
 
-        $user->update(['permissions' => $validated['permissions'] ?: null]);
+        $permissions = $validated['permissions'] ?: null;
+
+        if (!PermissionValidator::validate($permissions)) {
+            return back()->withErrors([
+                'permissions' => 'Contiene permisos inválidos.',
+            ]);
+        }
+
+        $oldPermissions = $user->permissions;
+        $user->update(['permissions' => $permissions]);
+
+        UserAuditService::logPermissionsUpdate($user, $oldPermissions, $permissions, $request->user(), $request);
 
         return back()->with('success', 'Excepciones guardadas correctamente.');
     }
@@ -122,9 +162,27 @@ class UsersController extends Controller
         $this->requireAdmin($request);
         $this->preventSelfAction($request, $user, 'No puedes eliminar tu propia cuenta.');
 
+        UserAuditService::logUserDeletion($user, $request->user(), $request);
         $user->delete();
 
         return back()->with('success', 'Usuario eliminado correctamente.');
+    }
+
+    public function restoreUser(Request $request, int $userId): RedirectResponse
+    {
+        $this->requireAdmin($request);
+
+        $user = User::withTrashed()->findOrFail($userId);
+
+        if (!$user->trashed()) {
+            return back()->withErrors(['user' => 'El usuario no está eliminado.']);
+        }
+
+        $user->restore();
+
+        UserAuditService::logUserRestoration($user, $request->user(), $request);
+
+        return back()->with('success', 'Usuario restaurado correctamente.');
     }
 
     // ── Profile management ─────────────────────────────────────────────────────
