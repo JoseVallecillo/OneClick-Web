@@ -6,6 +6,13 @@ use Modules\Pos\Http\Controllers\PosSessionController;
 use Modules\Pos\Http\Controllers\PosSaleController;
 use Modules\Pos\Http\Controllers\PosTableController;
 use Modules\Pos\Http\Controllers\PosWaiterController;
+use Modules\Pos\Http\Controllers\PosPromotionController;
+use Modules\Pos\Http\Controllers\KitchenTicketController;
+use Modules\Pos\Http\Controllers\PosReportController;
+use Modules\Pos\Http\Controllers\PosClosingController;
+use Modules\Pos\Http\Controllers\PosTransactionHistoryController;
+use Modules\Pos\Http\Controllers\PosReceiptController;
+use Modules\Pos\Http\Controllers\FiscalIntegrationController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -59,4 +66,55 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pos/waiters/{waiter}/edit',   [PosWaiterController::class, 'edit'])->name('pos.waiters.edit');
     Route::put('pos/waiters/{waiter}',        [PosWaiterController::class, 'update'])->name('pos.waiters.update');
     Route::delete('pos/waiters/{waiter}',     [PosWaiterController::class, 'destroy'])->name('pos.waiters.destroy');
+
+    // ── Promociones ───────────────────────────────────────────────────────────
+    Route::get('pos/promotions/create',       [PosPromotionController::class, 'create'])->name('pos.promotions.create');
+    Route::post('pos/promotions',             [PosPromotionController::class, 'store'])->name('pos.promotions.store');
+    Route::get('pos/promotions',              [PosPromotionController::class, 'index'])->name('pos.promotions.index');
+    Route::get('pos/promotions/{promotion}/edit', [PosPromotionController::class, 'edit'])->name('pos.promotions.edit');
+    Route::put('pos/promotions/{promotion}',  [PosPromotionController::class, 'update'])->name('pos.promotions.update');
+    Route::delete('pos/promotions/{promotion}', [PosPromotionController::class, 'destroy'])->name('pos.promotions.destroy');
+    Route::patch('pos/promotions/{promotion}/toggle', [PosPromotionController::class, 'toggle'])->name('pos.promotions.toggle');
+
+    // ── Cocina ─────────────────────────────────────────────────────────────────
+    Route::get('pos/kitchen/tickets',         [KitchenTicketController::class, 'index'])->name('pos.kitchen.index');
+    Route::get('pos/kitchen/tickets/{ticket}', [KitchenTicketController::class, 'show'])->name('pos.kitchen.show');
+    Route::post('pos/kitchen/tickets/{ticket}/start', [KitchenTicketController::class, 'start'])->name('pos.kitchen.start');
+    Route::post('pos/kitchen/tickets/{ticket}/complete', [KitchenTicketController::class, 'complete'])->name('pos.kitchen.complete');
+    Route::post('pos/kitchen/tickets/{ticket}/cancel', [KitchenTicketController::class, 'cancel'])->name('pos.kitchen.cancel');
+    Route::get('pos/kitchen/tickets/{ticket}/print', [KitchenTicketController::class, 'print'])->name('pos.kitchen.print');
+    Route::post('pos/kitchen/tickets/{ticket}/reprint', [KitchenTicketController::class, 'reprint'])->name('pos.kitchen.reprint');
+
+    // ── Reportes ───────────────────────────────────────────────────────────────
+    Route::get('pos/reports/sales-by-period', [PosReportController::class, 'salesByPeriod'])->name('pos.reports.sales-by-period');
+    Route::get('pos/reports/sales-by-waiter', [PosReportController::class, 'salesByWaiter'])->name('pos.reports.sales-by-waiter');
+    Route::get('pos/reports/sales-by-table',  [PosReportController::class, 'salesByTable'])->name('pos.reports.sales-by-table');
+    Route::get('pos/reports/product-analysis', [PosReportController::class, 'productAnalysis'])->name('pos.reports.product-analysis');
+    Route::get('pos/reports/void-report',     [PosReportController::class, 'voidReport'])->name('pos.reports.void-report');
+    Route::get('pos/reports/session-report',  [PosReportController::class, 'sessionReport'])->name('pos.reports.session-report');
+
+    // ── Cierre de caja ─────────────────────────────────────────────────────────
+    Route::get('pos/sessions/{session}/closing', [PosClosingController::class, 'show'])->name('pos.closing.show');
+    Route::post('pos/sessions/{session}/closing', [PosClosingController::class, 'store'])->name('pos.closing.store');
+
+    // ── Historial de transacciones ─────────────────────────────────────────────
+    Route::get('pos/history',                 [PosTransactionHistoryController::class, 'index'])->name('pos.history.index');
+    Route::get('pos/history/{sale}',          [PosTransactionHistoryController::class, 'show'])->name('pos.history.show');
+    Route::get('pos/history/export',          [PosTransactionHistoryController::class, 'export'])->name('pos.history.export');
+
+    // ── Recibos ────────────────────────────────────────────────────────────────
+    Route::get('pos/sales/{sale}/receipt-details', [PosReceiptController::class, 'show'])->name('pos.receipt.show');
+    Route::get('pos/sales/{sale}/receipt',    [PosReceiptController::class, 'receipt'])->name('pos.receipt');
+    Route::post('pos/sales/{sale}/receipt/reprint', [PosReceiptController::class, 'reprint'])->name('pos.receipt.reprint');
+    Route::get('pos/sales/{sale}/kitchen-ticket', [PosReceiptController::class, 'kitchenTicket'])->name('pos.kitchen-ticket');
+    Route::get('pos/sales/{sale}/reprints',   [PosReceiptController::class, 'reprints'])->name('pos.reprints');
+
+    // ── Integración Fiscal (SAR Honduras) ───────────────────────────────────────
+    Route::get('pos/fiscal/documents',        [FiscalIntegrationController::class, 'index'])->name('pos.fiscal.index');
+    Route::get('pos/fiscal/documents/{document}', [FiscalIntegrationController::class, 'show'])->name('pos.fiscal.show');
+    Route::post('pos/fiscal/documents/{document}/authorize', [FiscalIntegrationController::class, 'authorize'])->name('pos.fiscal.authorize');
+    Route::post('pos/fiscal/documents/{document}/retry', [FiscalIntegrationController::class, 'retry'])->name('pos.fiscal.retry');
+    Route::post('pos/fiscal/documents/{document}/cancel', [FiscalIntegrationController::class, 'cancel'])->name('pos.fiscal.cancel');
+    Route::get('pos/sales/{sale}/fiscal-status', [FiscalIntegrationController::class, 'status'])->name('pos.fiscal.status');
+    Route::get('pos/fiscal/validate-cai',    [FiscalIntegrationController::class, 'validateCai'])->name('pos.fiscal.validate-cai');
 });
