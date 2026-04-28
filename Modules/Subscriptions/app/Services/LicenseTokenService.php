@@ -47,6 +47,7 @@ class LicenseTokenService
      * Retorna la suscripción creada o lanza una excepción descriptiva.
      *
      * @throws \RuntimeException
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function activate(string $token): Subscription
     {
@@ -67,18 +68,7 @@ class LicenseTokenService
             throw new \RuntimeException('Este token ha expirado.');
         }
 
-        // Desactivar suscripción activa anterior
-        Subscription::where('company_id', $record->company_id)
-            ->where('is_active', true)
-            ->update(['is_active' => false]);
-
-        $subscription = Subscription::create([
-            'company_id' => $record->company_id,
-            'plan_id'    => $record->plan_id,
-            'starts_at'  => now(),
-            'ends_at'    => now()->addDays($record->plan->duration_days),
-            'is_active'  => true,
-        ]);
+        $subscription = $this->createSubscription($record->company_id, $record->plan_id);
 
         $record->update([
             'status'  => 'used',
@@ -86,5 +76,26 @@ class LicenseTokenService
         ]);
 
         return $subscription;
+    }
+
+    /**
+     * Crea una suscripción para una empresa y plan.
+     * Desactiva cualquier suscripción activa anterior.
+     */
+    public function createSubscription(int $companyId, int $planId): Subscription
+    {
+        $plan = SubscriptionPlan::findOrFail($planId);
+
+        Subscription::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        return Subscription::create([
+            'company_id' => $companyId,
+            'plan_id'    => $plan->id,
+            'starts_at'  => now(),
+            'ends_at'    => now()->addDays($plan->duration_days),
+            'is_active'  => true,
+        ]);
     }
 }

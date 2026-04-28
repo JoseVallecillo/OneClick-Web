@@ -4,10 +4,13 @@ namespace Modules\Subscriptions\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Settings\Models\Company;
 
 class Subscription extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'company_id',
         'plan_id',
@@ -32,7 +35,6 @@ class Subscription extends Model
         return $this->belongsTo(SubscriptionPlan::class, 'plan_id');
     }
 
-    /** Días restantes hasta la expiración (0 si ya venció). */
     public function daysRemaining(): int
     {
         $remaining = (int) now()->diffInDays($this->ends_at, false);
@@ -40,7 +42,6 @@ class Subscription extends Model
         return max(0, $remaining);
     }
 
-    /** Verifica si la suscripción aún es válida (activa Y no vencida). */
     public function isValid(): bool
     {
         return $this->is_active && $this->ends_at->isFuture();
