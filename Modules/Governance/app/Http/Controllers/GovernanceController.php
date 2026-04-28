@@ -15,6 +15,7 @@ use Modules\Governance\Models\GovernanceAuditLog;
 use Modules\Governance\Models\GovernanceAuthRequest;
 use Modules\Governance\Models\GovernanceFieldValidator;
 use Modules\Governance\Models\UiGovernanceRule;
+use Modules\Governance\Services\GovernancePermissionService;
 use Nwidart\Modules\Facades\Module;
 
 class GovernanceController extends Controller
@@ -60,6 +61,7 @@ class GovernanceController extends Controller
     public function addRule(Request $request): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.rules.create');
 
         $enabledModules = collect(Module::allEnabled())->map(fn ($m) => $m->getName())->values()->toArray();
 
@@ -99,6 +101,8 @@ class GovernanceController extends Controller
     public function toggleRule(Request $request, UiGovernanceRule $rule): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.rules.update');
+
         $rule->update(['active' => ! $rule->active]);
 
         return back()->with('success', 'Regla actualizada.');
@@ -107,6 +111,8 @@ class GovernanceController extends Controller
     public function deleteRule(Request $request, UiGovernanceRule $rule): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.rules.delete');
+
         $rule->delete();
 
         return back()->with('success', 'Regla eliminada.');
@@ -306,6 +312,7 @@ class GovernanceController extends Controller
     public function addFieldValidator(Request $request): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.validators.create');
 
         $enabledModules = collect(Module::allEnabled())->map(fn ($m) => $m->getName())->values()->toArray();
 
@@ -335,6 +342,8 @@ class GovernanceController extends Controller
     public function toggleFieldValidator(Request $request, GovernanceFieldValidator $validator): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.validators.update');
+
         $validator->update(['active' => ! $validator->active]);
 
         return back()->with('success', 'Field validator updated.');
@@ -343,6 +352,8 @@ class GovernanceController extends Controller
     public function deleteFieldValidator(Request $request, GovernanceFieldValidator $validator): RedirectResponse
     {
         $this->requireAdmin($request);
+        GovernancePermissionService::ensurePermission($request->user(), 'governance.validators.delete');
+
         $validator->delete();
 
         return back()->with('success', 'Field validator deleted.');

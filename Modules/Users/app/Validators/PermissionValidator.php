@@ -2,18 +2,11 @@
 
 namespace Modules\Users\Validators;
 
+use Illuminate\Support\Facades\Cache;
+
 class PermissionValidator
 {
-    private static array $validPermissions = [
-        'users.create',
-        'users.read',
-        'users.update',
-        'users.delete',
-        'profiles.create',
-        'profiles.read',
-        'profiles.update',
-        'profiles.delete',
-    ];
+    private const PERMISSIONS_CACHE_KEY = 'app:valid_permissions';
 
     public static function validate(?array $permissions): bool
     {
@@ -21,8 +14,10 @@ class PermissionValidator
             return true;
         }
 
+        $validPermissions = self::getValidPermissions();
+
         foreach (array_keys($permissions) as $permission) {
-            if (!in_array($permission, self::$validPermissions, true)) {
+            if (!in_array($permission, $validPermissions, true)) {
                 return false;
             }
         }
@@ -32,13 +27,52 @@ class PermissionValidator
 
     public static function getValidPermissions(): array
     {
-        return self::$validPermissions;
+        return Cache::remember(self::PERMISSIONS_CACHE_KEY, now()->addDays(7), function () {
+            return self::getDefaultPermissions();
+        });
     }
 
-    public static function addPermission(string $permission): void
+    public static function registerPermission(string $permission): void
     {
-        if (!in_array($permission, self::$validPermissions, true)) {
-            self::$validPermissions[] = $permission;
+        $permissions = self::getValidPermissions();
+
+        if (!in_array($permission, $permissions, true)) {
+            $permissions[] = $permission;
+            Cache::put(self::PERMISSIONS_CACHE_KEY, $permissions, now()->addDays(7));
         }
+    }
+
+    public static function registerPermissions(array $permissions): void
+    {
+        foreach ($permissions as $permission) {
+            self::registerPermission($permission);
+        }
+    }
+
+    public static function clearCache(): void
+    {
+        Cache::forget(self::PERMISSIONS_CACHE_KEY);
+    }
+
+    private static function getDefaultPermissions(): array
+    {
+        return [
+            'users.create',
+            'users.read',
+            'users.update',
+            'users.delete',
+            'profiles.create',
+            'profiles.read',
+            'profiles.update',
+            'profiles.delete',
+            'governance.rules.create',
+            'governance.rules.read',
+            'governance.rules.update',
+            'governance.rules.delete',
+            'governance.validators.create',
+            'governance.validators.read',
+            'governance.validators.update',
+            'governance.validators.delete',
+        ];
     }
 }
