@@ -45,9 +45,9 @@ class ContactCommunicationsController extends Controller
             'type' => ['required', 'in:call,email,meeting,note'],
             'subject' => ['nullable', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'communication_date' => ['required', 'datetime'],
+            'communication_date' => ['required', 'date'],
             'outcome' => ['nullable', 'in:positive,negative,neutral,follow_up_needed'],
-            'follow_up_date' => ['nullable', 'datetime', 'after:communication_date'],
+            'follow_up_date' => ['nullable', 'date', 'after:communication_date'],
             'follow_up_type' => ['nullable', 'in:call,email,meeting'],
         ]);
 
@@ -81,9 +81,9 @@ class ContactCommunicationsController extends Controller
             'type' => ['required', 'in:call,email,meeting,note'],
             'subject' => ['nullable', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'communication_date' => ['required', 'datetime'],
+            'communication_date' => ['required', 'date'],
             'outcome' => ['nullable', 'in:positive,negative,neutral,follow_up_needed'],
-            'follow_up_date' => ['nullable', 'datetime', 'after:communication_date'],
+            'follow_up_date' => ['nullable', 'date', 'after:communication_date'],
             'follow_up_type' => ['nullable', 'in:call,email,meeting'],
         ]);
 
