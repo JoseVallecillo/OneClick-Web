@@ -21,8 +21,10 @@ import {
     Trash2,
     Wallet,
     X,
+    ChevronUp,
+    ChevronDown,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -77,6 +79,8 @@ interface CartLine {
     unit_price: number;
     tax_rate: number;
     description: string;
+    original_price: number;
+    price_changes: { from: number; to: number; timestamp: number }[];
 }
 
 type PaymentMethod = 'cash' | 'card' | 'transfer';
@@ -120,7 +124,9 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     }, [flash?.error]);
 
     // ── Cart state ──────────────────────────────────────────────────────────
-    const [cart, setCart]             = useState<CartLine[]>([]);
+    const STORAGE_KEY = `pos_cart_${session.id}`;
+    const [cart, setCart] = useState<CartLine[]>([]);
+    const [cartLoaded, setCartLoaded] = useState(false);
     const [customerId, setCustomerId] = useState<string>('__walk_in__');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
     const [amountTendered, setAmountTendered] = useState<string>('');
@@ -129,6 +135,26 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     const [showHistory, setShowHistory]       = useState(false);
 
     const searchRef = useRef<HTMLInputElement>(null);
+
+    // Load cart from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setCart(parsed);
+            } catch (e) {
+                console.error('Failed to load cart from localStorage', e);
+            }
+        }
+        setCartLoaded(true);
+    }, [STORAGE_KEY]);
+
+    // Save cart to localStorage whenever it changes
+    useEffect(() => {
+        if (!cartLoaded) return;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    }, [cart, cartLoaded, STORAGE_KEY]);
 
     // Focus search on mount
     useEffect(() => { searchRef.current?.focus(); }, []);
@@ -155,9 +181,10 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     }, [products, searchQuery, categoryFilter]);
 
     // ── Cart operations ─────────────────────────────────────────────────────
-    function addProduct(product: Product) {
+    const addProduct = useCallback((product: Product) => {
         setCart((prev) => {
             const existing = prev.findIndex((l) => l.product_id === product.id);
+            const price = parseFloat(product.price);
             if (existing >= 0) {
                 return prev.map((l, i) => i === existing ? { ...l, qty: l.qty + 1 } : l);
             }
@@ -165,12 +192,14 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                 product_id:  product.id,
                 product,
                 qty:         1,
-                unit_price:  parseFloat(product.price),
+                unit_price:  price,
                 tax_rate:    product.tax_rate ? parseFloat(product.tax_rate.rate) : 0,
                 description: '',
+                original_price: price,
+                price_changes: [],
             }];
         });
-    }
+    }, []);
 
     function updateQty(idx: number, delta: number) {
         setCart((prev) => {
@@ -189,7 +218,16 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     function setPrice(idx: number, value: string) {
         const parsed = parseFloat(value);
         if (!isNaN(parsed) && parsed >= 0) {
-            setCart((prev) => prev.map((l, i) => i === idx ? { ...l, unit_price: parsed } : l));
+            setCart((prev) => prev.map((l, i) => {
+                if (i === idx) {
+                    const changes = l.price_changes.length > 0 ? [...l.price_changes] : [];
+                    if (l.unit_price !== parsed) {
+                        changes.push({ from: l.unit_price, to: parsed, timestamp: Date.now() });
+                    }
+                    return { ...l, unit_price: parsed, price_changes: changes };
+                }
+                return l;
+            }));
         }
     }
 
@@ -206,10 +244,37 @@ export default function Sell({ session, products, customers, recentSales }: Prop
 
     function clearCart() {
         setCart([]);
-        setCustomerId('');
+        setCustomerId('__walk_in__');
         setAmountTendered('');
         setPaymentMethod('cash');
+        localStorage.removeItem(STORAGE_KEY);
     }
+
+    // ── Keyboard shortcuts ──────────────────────────────────────────────────
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'k' || e.key === 'K') {
+                    e.preventDefault();
+                    searchRef.current?.focus();
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitSale();
+                }
+            }
+            if (e.key === 'Escape') {
+                searchQuery && setSearchQuery('');
+            }
+            if (e.key === 'Delete' && e.shiftKey && cart.length > 0) {
+                e.preventDefault();
+                clearCart();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [searchQuery, cart.length]);
 
     // ── Totals ──────────────────────────────────────────────────────────────
     const subtotal  = cart.reduce((s, l) => s + calcLine(l).subtotal, 0);
@@ -240,7 +305,10 @@ export default function Sell({ session, products, customers, recentSales }: Prop
 
         setProcessing(true);
         router.post(`/pos/sessions/${session.id}/sales`, payload, {
-            onFinish: () => setProcessing(false),
+            onFinish: () => {
+                setProcessing(false);
+                localStorage.removeItem(STORAGE_KEY);
+            },
         });
     }
 
@@ -292,7 +360,10 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                     <span className="text-sm font-semibold font-mono">{session.reference}</span>
                     {session.name && <span className="text-xs text-muted-foreground">{session.name}</span>}
                     <Badge className="border border-green-300 bg-green-50 text-green-700 text-[10px] dark:bg-green-950 dark:text-green-300">Abierta</Badge>
-                    <div className="ml-auto flex items-center gap-2">
+                    <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="text-[10px]">Ctrl+K buscar • Ctrl+Enter cobrar • Shift+Del limpiar</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setShowHistory(!showHistory)}>
                             <History className="h-3.5 w-3.5" />
                             Historial
@@ -344,13 +415,12 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                             )}
                         </div>
 
-                        {/* Catalog area: either Category Grid or Product Grid */}
+                        {/* Catalog area: Category Grid or Product Grid */}
                         <div className="flex-1 overflow-y-auto p-3">
                             {!searchQuery.trim() && categoryFilter === '__all__' ? (
                                 /* ── Category Grid ───────────────────────────────── */
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                     {categories.map((c, i) => {
-                                        // Simple deterministic color based on index
                                         const colors = [
                                             'bg-blue-500/10 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
                                             'bg-purple-500/10 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300',
@@ -372,7 +442,7 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                                 ) : (
                                                     <div className="absolute -bottom-2 -right-2 h-16 w-16 rounded-full bg-current opacity-[0.05]" />
                                                 )}
-                                                
+
                                                 <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-background/80 shadow-sm backdrop-blur-sm transition-transform group-hover:scale-110">
                                                     {c.image_path ? (
                                                         <img src={`/storage/${c.image_path}`} alt={c.name} className="h-full w-full rounded-full object-cover" />
@@ -391,7 +461,6 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                             ) : (
                                 /* ── Product Grid ────────────────────────────────── */
                                 <div className="space-y-4">
-                                    {/* Sub-header for navigation when in a category */}
                                     {!searchQuery.trim() && categoryFilter !== '__all__' && (
                                         <div className="flex items-center justify-between">
                                             <Button
@@ -429,7 +498,6 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                                                 : 'hover:border-primary hover:bg-primary/5 active:scale-95 cursor-pointer shadow-sm hover:shadow-md'
                                                         }`}
                                                     >
-                                                        {/* Product Image */}
                                                         <div className="aspect-video w-full overflow-hidden bg-muted relative">
                                                             {product.image_path ? (
                                                                 <img src={`/storage/${product.image_path}`} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
@@ -458,7 +526,6 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                                             </div>
                                                         </div>
 
-                                                        {/* Add icon on hover */}
                                                         {!stockLow && (
                                                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-primary text-primary-foreground rounded-full p-1 shadow-lg">
                                                                 <Plus className="h-3 w-3" />
@@ -514,83 +581,96 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                             )}
                         </div>
 
-                        {/* Cart lines */}
-                        <div className="flex-1 overflow-y-auto">
+                        {/* Cart table */}
+                        <div className="flex-1 overflow-auto">
                             {cart.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
                                     <ShoppingCart className="h-8 w-8 mb-2 opacity-20" />
                                     <p>Selecciona productos del catálogo</p>
                                 </div>
                             ) : (
-                                <div className="p-2 flex flex-col gap-1">
-                                    {cart.map((line, idx) => {
-                                        const { total } = calcLine(line);
-                                        return (
-                                            <div key={line.product_id} className="rounded-lg border bg-background p-2">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-medium leading-tight truncate">{line.product.name}</p>
-                                                        <p className="text-[10px] text-muted-foreground font-mono">{line.product.sku}</p>
-                                                    </div>
-                                                    <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive mt-0.5 flex-shrink-0">
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    {/* Qty controls */}
-                                                    <div className="flex items-center gap-1">
-                                                        <button onClick={() => updateQty(idx, -1)} className="rounded border h-6 w-6 flex items-center justify-center text-muted-foreground hover:bg-muted">
-                                                            <Minus className="h-3 w-3" />
-                                                        </button>
-                                                        <Input
-                                                            type="number"
-                                                            min="0.01"
-                                                            step="0.01"
-                                                            value={line.qty}
-                                                            onChange={(e) => setQty(idx, e.target.value)}
-                                                            className="h-6 w-14 text-center text-xs tabular-nums px-1"
-                                                        />
-                                                        <button onClick={() => updateQty(idx, 1)} className="rounded border h-6 w-6 flex items-center justify-center text-muted-foreground hover:bg-muted">
-                                                            <Plus className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Price */}
-                                                    <div className="flex items-center gap-1 flex-1">
-                                                        <span className="text-xs text-muted-foreground">{sym}</span>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={line.unit_price}
-                                                            onChange={(e) => setPrice(idx, e.target.value)}
-                                                            className="h-6 text-xs tabular-nums px-1"
-                                                        />
-                                                    </div>
-
-                                                    {/* Tax */}
-                                                    <div className="flex items-center gap-1 w-16">
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            step="0.01"
-                                                            value={line.tax_rate}
-                                                            onChange={(e) => setTaxRate(idx, e.target.value)}
-                                                            className="h-6 text-xs tabular-nums px-1 w-12"
-                                                        />
-                                                        <span className="text-xs text-muted-foreground">%</span>
-                                                    </div>
-
-                                                    {/* Line total */}
-                                                    <span className="text-xs font-bold tabular-nums ml-auto whitespace-nowrap">
-                                                        {sym} {fmtNum(total)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="border-b">
+                                    <table className="w-full text-xs">
+                                        <thead className="sticky top-0 bg-muted/50 border-b">
+                                            <tr>
+                                                <th className="text-left px-2 py-1.5 font-semibold">Producto</th>
+                                                <th className="text-center px-2 py-1.5 font-semibold w-14">Cant.</th>
+                                                <th className="text-center px-2 py-1.5 font-semibold w-16">Precio</th>
+                                                <th className="text-center px-2 py-1.5 font-semibold w-12">Tax%</th>
+                                                <th className="text-right px-2 py-1.5 font-semibold w-14">Total</th>
+                                                <th className="text-center px-1 py-1.5 w-8"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {cart.map((line, idx) => {
+                                                const { total } = calcLine(line);
+                                                const priceModified = line.original_price !== line.unit_price;
+                                                return (
+                                                    <tr key={line.product_id} className="border-b hover:bg-muted/30 transition-colors">
+                                                        <td className="px-2 py-2">
+                                                            <div>
+                                                                <div className="font-medium">{line.product.name}</div>
+                                                                <div className="text-[10px] text-muted-foreground font-mono">{line.product.sku}</div>
+                                                                {priceModified && (
+                                                                    <div className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
+                                                                        <ChevronUp className="h-3 w-3" />
+                                                                        {sym} {fmtNum(line.original_price)} → {sym} {fmtNum(line.unit_price)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-2 py-2">
+                                                            <div className="flex items-center justify-center gap-0.5">
+                                                                <button onClick={() => updateQty(idx, -1)} className="rounded hover:bg-muted p-0.5">
+                                                                    <Minus className="h-2.5 w-2.5" />
+                                                                </button>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0.01"
+                                                                    step="0.01"
+                                                                    value={line.qty}
+                                                                    onChange={(e) => setQty(idx, e.target.value)}
+                                                                    className="h-6 w-12 text-center text-xs tabular-nums px-0.5 py-0"
+                                                                />
+                                                                <button onClick={() => updateQty(idx, 1)} className="rounded hover:bg-muted p-0.5">
+                                                                    <Plus className="h-2.5 w-2.5" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-2 py-2">
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                value={line.unit_price}
+                                                                onChange={(e) => setPrice(idx, e.target.value)}
+                                                                className="h-6 text-xs tabular-nums text-center px-1 py-0"
+                                                            />
+                                                        </td>
+                                                        <td className="px-2 py-2">
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.01"
+                                                                value={line.tax_rate}
+                                                                onChange={(e) => setTaxRate(idx, e.target.value)}
+                                                                className="h-6 text-xs tabular-nums text-center px-0.5 py-0"
+                                                            />
+                                                        </td>
+                                                        <td className="text-right px-2 py-2 font-bold tabular-nums whitespace-nowrap">
+                                                            {sym} {fmtNum(total)}
+                                                        </td>
+                                                        <td className="text-center px-1 py-2">
+                                                            <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5">
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </div>
@@ -633,7 +713,6 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                     ))}
                                 </div>
 
-                                {/* Cash tendered */}
                                 {paymentMethod === 'cash' && (
                                     <div className="flex flex-col gap-2 mb-2">
                                         <Label className="text-xs">Monto recibido</Label>
@@ -646,7 +725,6 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                             placeholder={`Mínimo ${sym} ${fmtNum(grandTotal)}`}
                                             className="h-9 text-lg tabular-nums font-mono"
                                         />
-                                        {/* Quick amounts */}
                                         {quickAmounts.length > 0 && (
                                             <div className="flex gap-1">
                                                 {quickAmounts.map((amt) => (
@@ -696,5 +774,4 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     );
 }
 
-// No breadcrumb layout — full screen terminal
 Sell.layout = null;
