@@ -10,6 +10,7 @@ use Inertia\Response;
 use Modules\Contacts\Models\Contact;
 use Modules\Contacts\Models\ContactAddress;
 use Modules\Contacts\Models\ContactPerson;
+use Modules\Contacts\Models\ContactTag;
 
 class ContactsController extends Controller
 {
@@ -105,9 +106,23 @@ class ContactsController extends Controller
         $this->requireAdmin($request);
         $this->requireSubscription();
 
-        $contact->load(['addresses', 'persons']);
+        $contact->load([
+            'addresses',
+            'persons',
+            'bankDetails',
+            'paymentTerms',
+            'tags',
+            'communications' => fn ($q) => $q->with('user:id,name')->orderByDesc('communication_date')->limit(10),
+            'documents'      => fn ($q) => $q->orderByDesc('created_at'),
+            'supplierEvaluation',
+        ]);
 
-        return Inertia::render('Contacts::Form', ['contact' => $contact]);
+        $allTags = ContactTag::orderBy('name')->get(['id', 'name', 'color']);
+
+        return Inertia::render('Contacts::Form', [
+            'contact' => $contact,
+            'allTags' => $allTags,
+        ]);
     }
 
     public function update(Request $request, Contact $contact): RedirectResponse

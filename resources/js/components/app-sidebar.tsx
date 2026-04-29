@@ -43,8 +43,13 @@ const allNavItems: NavItem[] = [
         icon: BookUser,
         module: 'Contacts',
         items: [
-            { title: 'Crear Contacto', href: '/contacts/create' },
-            { title: 'Contactos',      href: '/contacts' },
+            { title: 'Contactos',             href: '/contacts' },
+            { title: 'Crear Contacto',        href: '/contacts/create' },
+            { title: 'Duplicados',            href: '/contacts/duplicates' },
+            { title: 'Clientes morosos',      href: '/contacts/reports/debtors' },
+            { title: 'Análisis proveedores',  href: '/contacts/reports/suppliers' },
+            { title: 'Clasificación clientes', href: '/contacts/reports/clients' },
+            { title: 'Act. comunicaciones',   href: '/contacts/reports/communications' },
         ],
     },
     {
