@@ -17,6 +17,7 @@ class Product extends Model
         'uom_id',
         'tax_rate_id',
         'sku',
+        'barcode',
         'name',
         'description',
         'type',

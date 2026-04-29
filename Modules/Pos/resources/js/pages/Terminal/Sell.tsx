@@ -31,6 +31,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 interface Product {
     id: number;
     sku: string;
+    barcode: string | null;
     name: string;
     price: string;
     uom_id: number;
@@ -133,8 +134,10 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     const [searchQuery, setSearchQuery]       = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('__all__');
     const [showHistory, setShowHistory]       = useState(false);
+    const [scanFeedback, setScanFeedback]     = useState<{ type: 'success' | 'error'; message: string; timestamp: number } | null>(null);
 
     const searchRef = useRef<HTMLInputElement>(null);
+    const lastScanTimeRef = useRef<number>(0);
 
     // Load cart from localStorage on mount
     useEffect(() => {
@@ -249,6 +252,32 @@ export default function Sell({ session, products, customers, recentSales }: Prop
         setPaymentMethod('cash');
         localStorage.removeItem(STORAGE_KEY);
     }
+
+    // ── Handle barcode scanner input ────────────────────────────────────────
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && searchQuery.trim()) {
+            e.preventDefault();
+            const now = Date.now();
+            const timeSinceLastScan = now - lastScanTimeRef.current;
+            lastScanTimeRef.current = now;
+
+            const query = searchQuery.trim();
+            const barcodeProduct = products.find(p => p.barcode && p.barcode === query);
+
+            if (barcodeProduct) {
+                const stockLow = barcodeProduct.stock !== null && barcodeProduct.stock <= 0;
+                if (!stockLow) {
+                    addProduct(barcodeProduct);
+                    setSearchQuery('');
+                    setScanFeedback({ type: 'success', message: `✓ ${barcodeProduct.name}`, timestamp: now });
+                    setTimeout(() => setScanFeedback(null), 2000);
+                } else {
+                    setScanFeedback({ type: 'error', message: `✗ Sin stock: ${barcodeProduct.name}`, timestamp: now });
+                    setTimeout(() => setScanFeedback(null), 2000);
+                }
+            }
+        }
+    };
 
     // ── Keyboard shortcuts ──────────────────────────────────────────────────
     useEffect(() => {
@@ -388,10 +417,11 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                 <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     ref={searchRef}
-                                    placeholder="Buscar por nombre o SKU…"
+                                    placeholder="Buscar por nombre, SKU o código de barras… (Enter para escanear)"
                                     className="h-8 pl-9 pr-8 text-sm"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={handleSearchKeyDown}
                                 />
                                 {searchQuery && (
                                     <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -539,6 +569,17 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                 </div>
                             )}
                         </div>
+
+                        {/* Barcode scan feedback */}
+                        {scanFeedback && (
+                            <div className={`fixed bottom-4 left-1/3 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg animate-in fade-in duration-200 ${
+                                scanFeedback.type === 'success'
+                                    ? 'border border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300'
+                                    : 'border border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300'
+                            }`}>
+                                {scanFeedback.message}
+                            </div>
+                        )}
 
                         {/* Recent sales history panel */}
                         {showHistory && recentSales.length > 0 && (
