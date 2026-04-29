@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Modules\Settings\Http\Middleware\SetActiveBranch::class,
             \App\Http\Middleware\EnsureCompanyExists::class,
         ]);
+
+        $middleware->alias([
+            'check-subscription-active' => \App\Http\Middleware\CheckSubscriptionActive::class,
+        ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Expira tokens vencidos y desactiva suscripciones pasadas cada hora

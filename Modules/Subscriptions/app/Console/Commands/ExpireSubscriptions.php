@@ -5,6 +5,7 @@ namespace Modules\Subscriptions\Console\Commands;
 use Illuminate\Console\Command;
 use Modules\Subscriptions\Models\LicenseToken;
 use Modules\Subscriptions\Models\Subscription;
+use Modules\Subscriptions\Services\SubscriptionsAuditService;
 
 class ExpireSubscriptions extends Command
 {
@@ -16,16 +17,34 @@ class ExpireSubscriptions extends Command
         // Tokens pendientes cuya fecha de expiración ya pasó
         $expiredTokens = LicenseToken::where('status', 'pending')
             ->where('expires_at', '<=', now())
-            ->update(['status' => 'expired']);
+            ->get();
 
-        $this->info("Tokens expirados: {$expiredTokens}");
+        foreach ($expiredTokens as $token) {
+            $token->update(['status' => 'expired']);
+            SubscriptionsAuditService::logTokenExpiration(
+                $token->id,
+                $token->company_id,
+                $token->plan_id,
+            );
+        }
+
+        $this->info("Tokens expirados: {$expiredTokens->count()}");
 
         // Suscripciones activas cuyo ends_at ya pasó
         $expiredSubs = Subscription::where('is_active', true)
             ->where('ends_at', '<=', now())
-            ->update(['is_active' => false]);
+            ->get();
 
-        $this->info("Suscripciones desactivadas: {$expiredSubs}");
+        foreach ($expiredSubs as $subscription) {
+            $subscription->update(['is_active' => false]);
+            SubscriptionsAuditService::logSubscriptionExpiration(
+                $subscription->id,
+                $subscription->company_id,
+                $subscription->plan_id,
+            );
+        }
+
+        $this->info("Suscripciones desactivadas: {$expiredSubs->count()}");
 
         return self::SUCCESS;
     }

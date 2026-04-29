@@ -5,10 +5,13 @@ namespace Modules\Subscriptions\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Settings\Models\Company;
 
 class LicenseToken extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'company_id',
         'plan_id',

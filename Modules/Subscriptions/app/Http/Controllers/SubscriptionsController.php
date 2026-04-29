@@ -3,9 +3,11 @@
 namespace Modules\Subscriptions\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Settings\Models\Company;
@@ -15,16 +17,19 @@ use Modules\Subscriptions\Models\LicenseToken;
 use Modules\Subscriptions\Models\Subscription;
 use Modules\Subscriptions\Models\SubscriptionPlan;
 use Modules\Subscriptions\Services\LicenseTokenService;
+use Modules\Subscriptions\Services\SubscriptionsAuditService;
+use Modules\Subscriptions\Services\SubscriptionsPermissionService;
 
 class SubscriptionsController extends Controller
 {
-    public function __construct(private readonly LicenseTokenService $tokenService) {}
+    private const TOKEN_GENERATION_RATE_LIMIT = 20;
 
-    // ── Vista principal ────────────────────────────────────────────────────────
+    public function __construct(private readonly LicenseTokenService $tokenService) {}
 
     public function index(Request $request): Response
     {
         $this->requireAdmin($request);
+        SubscriptionsPermissionService::ensurePermission($request->user(), 'subscriptions.view');
 
         $companies = Company::orderBy('commercial_name')->get(['id', 'commercial_name', 'legal_name']);
 
@@ -50,11 +55,17 @@ class SubscriptionsController extends Controller
         ]);
     }
 
-    // ── Generar token y enviar correo ──────────────────────────────────────────
-
     public function generateToken(Request $request): RedirectResponse
     {
         $this->requireAdmin($request);
+        SubscriptionsPermissionService::ensurePermission($request->user(), 'subscriptions.tokens.create');
+
+        $key = 'subscriptions:generate-token:' . $request->user()->id;
+        if (RateLimiter::tooManyAttempts($key, self::TOKEN_GENERATION_RATE_LIMIT)) {
+            return back()->withErrors(['token' => 'Demasiadas solicitudes. Intente más tarde.']);
+        }
+
+        RateLimiter::hit($key, 60);
 
         $data = $request->validate([
             'company_id'      => ['required', 'integer', 'exists:companies,id'],
@@ -75,21 +86,34 @@ class SubscriptionsController extends Controller
             $hours,
         );
 
+        SubscriptionsAuditService::logTokenGeneration(
+            $request->user(),
+            $company->id,
+            $plan->id,
+            $data['recipient_email'],
+            $hours,
+        );
+
         MailConfigurator::applyFromDatabase();
         Mail::to($data['recipient_email'])->send(new LicenseTokenMail($token));
 
         return back()->with('success', "Token generado y enviado a {$data['recipient_email']}. Expira en {$hours} horas.");
     }
 
-    // ── Reenviar correo de token pendiente ─────────────────────────────────────
-
     public function resendToken(Request $request, LicenseToken $token): RedirectResponse
     {
         $this->requireAdmin($request);
+        SubscriptionsPermissionService::ensurePermission($request->user(), 'subscriptions.tokens.resend');
 
         if (! $token->isPending()) {
             return back()->withErrors(['token' => 'Solo se pueden reenviar tokens pendientes y no expirados.']);
         }
+
+        SubscriptionsAuditService::logTokenResend(
+            $request->user(),
+            $token->id,
+            $token->recipient_email,
+        );
 
         MailConfigurator::applyFromDatabase();
         Mail::to($token->recipient_email)->send(new LicenseTokenMail($token));
@@ -97,11 +121,10 @@ class SubscriptionsController extends Controller
         return back()->with('success', "Correo reenviado a {$token->recipient_email}.");
     }
 
-    // ── Revocar token manualmente ──────────────────────────────────────────────
-
     public function revokeToken(Request $request, LicenseToken $token): RedirectResponse
     {
         $this->requireAdmin($request);
+        SubscriptionsPermissionService::ensurePermission($request->user(), 'subscriptions.tokens.revoke');
 
         if ($token->status !== 'pending') {
             return back()->withErrors(['token' => 'Solo se pueden revocar tokens pendientes.']);
@@ -109,10 +132,14 @@ class SubscriptionsController extends Controller
 
         $token->update(['status' => 'revoked']);
 
+        SubscriptionsAuditService::logTokenRevocation(
+            $request->user(),
+            $token->id,
+            'Manual revocation',
+        );
+
         return back()->with('success', 'Token revocado correctamente.');
     }
-
-    // ── Activar licencia desde enlace del correo ───────────────────────────────
 
     public function showActivate(Request $request, string $token): Response
     {
@@ -150,15 +177,23 @@ class SubscriptionsController extends Controller
 
         try {
             $subscription = $this->tokenService->activate($request->input('token'));
+        } catch (ModelNotFoundException) {
+            return back()->withErrors(['token' => 'Token no encontrado.']);
         } catch (\RuntimeException $e) {
             return back()->withErrors(['token' => $e->getMessage()]);
         }
 
+        SubscriptionsAuditService::logSubscriptionActivation(
+            $request->user(),
+            $subscription->id,
+            $subscription->company_id,
+            $subscription->plan_id,
+            'token',
+        );
+
         return redirect()->route('subscriptions.index')
             ->with('success', "Licencia activada. Válida hasta {$subscription->ends_at->format('d/m/Y')}.");
     }
-
-    // ── Activación por PIN (solo desarrollo) ──────────────────────────────────
 
     public function activateByPin(Request $request): RedirectResponse
     {
@@ -178,31 +213,38 @@ class SubscriptionsController extends Controller
             return back()->withErrors(['pin' => 'PIN incorrecto.']);
         }
 
-        // Desactivar suscripción activa anterior
-        Subscription::where('company_id', $request->input('company_id'))
-            ->where('is_active', true)
-            ->update(['is_active' => false]);
+        try {
+            $subscription = $this->tokenService->createSubscription(
+                $request->input('company_id'),
+                $request->input('plan_id'),
+            );
+        } catch (ModelNotFoundException) {
+            return back()->withErrors(['pin' => 'Plan no encontrado.']);
+        }
 
-        $plan = SubscriptionPlan::findOrFail($request->input('plan_id'));
-
-        $subscription = Subscription::create([
-            'company_id' => $request->input('company_id'),
-            'plan_id'    => $plan->id,
-            'starts_at'  => now(),
-            'ends_at'    => now()->addDays($plan->duration_days),
-            'is_active'  => true,
-        ]);
+        SubscriptionsAuditService::logSubscriptionActivation(
+            $request->user(),
+            $subscription->id,
+            $subscription->company_id,
+            $subscription->plan_id,
+            'pin',
+        );
 
         return back()->with('success', "Licencia activada por PIN. Válida hasta {$subscription->ends_at->format('d/m/Y')}.");
     }
 
-    // ── Desactivar suscripción manualmente ────────────────────────────────────
-
     public function deactivate(Request $request, Subscription $subscription): RedirectResponse
     {
         $this->requireAdmin($request);
+        SubscriptionsPermissionService::ensurePermission($request->user(), 'subscriptions.deactivate');
 
         $subscription->update(['is_active' => false]);
+
+        SubscriptionsAuditService::logSubscriptionDeactivation(
+            $request->user(),
+            $subscription->id,
+            'Manual deactivation',
+        );
 
         return back()->with('success', 'Suscripción desactivada.');
     }
