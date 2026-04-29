@@ -102,28 +102,33 @@ export default function ProductForm({ product, categories, uoms, taxRates, ingre
 
     const [showPrices,    setShowPrices]    = useState(() => (product?.prices?.length ?? 0) > 0);
     const [showExtraInfo, setShowExtraInfo] = useState(() => !!(product?.description || product?.image_path));
+    const [showClothing,  setShowClothing]  = useState(() => product?.is_clothing ?? false);
 
     const { data, setData, post, patch, processing, errors, reset, transform } = useForm({
-        sku:          product?.sku          ?? '',
-        name:         product?.name         ?? '',
-        description:  product?.description  ?? '',
-        category_id:  product?.category_id  ? String(product.category_id) : '__none__',
-        uom_id:       product?.uom_id       ? String(product.uom_id)      : '__none__',
-        tax_rate_id:  product?.tax_rate_id  ? String(product.tax_rate_id) : '__none__',
-        type:         product?.type         ?? 'storable',
-        tracking:     product?.tracking     ?? 'none',
-        valuation:    product?.valuation    ?? 'average',
-        cost:         isEdit ? String(product?.cost) : '',
-        price:        isEdit ? String(product?.price) : '',
-        min_stock:    product?.min_stock    ? String(product.min_stock) : '',
-        image_path:   product?.image_path   ?? '',
-        active:       product?.active       ?? true,
-        has_recipe:   product?.has_recipe   ?? false,
-        recipe:       (product?.recipe_lines ?? []).map((l: any) => ({
+        sku:                  product?.sku                  ?? '',
+        name:                 product?.name                 ?? '',
+        description:          product?.description          ?? '',
+        category_id:          product?.category_id  ? String(product.category_id) : '__none__',
+        uom_id:               product?.uom_id       ? String(product.uom_id)      : '__none__',
+        tax_rate_id:          product?.tax_rate_id  ? String(product.tax_rate_id) : '__none__',
+        type:                 product?.type                 ?? 'storable',
+        tracking:             product?.tracking             ?? 'none',
+        valuation:            product?.valuation            ?? 'average',
+        cost:                 isEdit ? String(product?.cost) : '',
+        price:                isEdit ? String(product?.price) : '',
+        min_stock:            product?.min_stock    ? String(product.min_stock) : '',
+        image_path:           product?.image_path           ?? '',
+        active:               product?.active               ?? true,
+        has_recipe:           product?.has_recipe           ?? false,
+        is_clothing:          product?.is_clothing          ?? false,
+        material:             product?.material             ?? '',
+        care_instructions:    product?.care_instructions    ?? '',
+        size_guide:           product?.size_guide           ?? '',
+        recipe:               (product?.recipe_lines ?? []).map((l: any) => ({
             ingredient_id: String(l.ingredient_id),
             qty:           String(l.qty),
         })) as RecipeLine[],
-        extra_prices: (product?.prices ?? []).map((p: any) => ({
+        extra_prices:         (product?.prices ?? []).map((p: any) => ({
             name:  p.name,
             price: String(p.price),
         })) as ExtraPrice[],
@@ -608,6 +613,72 @@ export default function ProductForm({ product, categories, uoms, taxRates, ingre
                                     onChange={(val) => setData('image_path', val)}
                                 />
                                 {errors.image_path && <p className="text-xs text-red-500">{errors.image_path}</p>}
+                            </div>
+                        </CardContent>
+                        )}
+                    </Card>
+
+                    {/* Información de Ropa */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base">Información de Ropa</CardTitle>
+                                <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-input accent-primary"
+                                        checked={data.is_clothing}
+                                        onChange={(e) => {
+                                            setData('is_clothing', e.target.checked);
+                                            setShowClothing(e.target.checked);
+                                            if (!e.target.checked) {
+                                                setData('material', '');
+                                                setData('care_instructions', '');
+                                                setData('size_guide', '');
+                                            }
+                                        }}
+                                    />
+                                    Es producto de ropa
+                                </label>
+                            </div>
+                            {data.is_clothing && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Agrega información específica para prendas de vestir como material, cuidados y guía de talles.
+                                </p>
+                            )}
+                        </CardHeader>
+                        {data.is_clothing && (
+                        <CardContent className="grid gap-4 sm:grid-cols-2 pt-0 border-t">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="material">Material / Composición</Label>
+                                <Input
+                                    id="material"
+                                    placeholder="Ej. 100% algodón, 80% poliéster 20% spandex"
+                                    value={data.material}
+                                    onChange={(e) => setData('material', e.target.value)}
+                                />
+                                {errors.material && <p className="text-xs text-red-500">{errors.material}</p>}
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="size_guide">Guía de Talles</Label>
+                                <Input
+                                    id="size_guide"
+                                    placeholder="Ej. XS, S, M, L, XL, XXL"
+                                    value={data.size_guide}
+                                    onChange={(e) => setData('size_guide', e.target.value)}
+                                />
+                                {errors.size_guide && <p className="text-xs text-red-500">{errors.size_guide}</p>}
+                            </div>
+                            <div className="flex flex-col gap-1.5 sm:col-span-2">
+                                <Label htmlFor="care_instructions">Instrucciones de Cuidado</Label>
+                                <Textarea
+                                    id="care_instructions"
+                                    placeholder="Ej. Lavar en agua fría. No usar blanqueador. Secar al aire."
+                                    value={data.care_instructions}
+                                    onChange={(e) => setData('care_instructions', e.target.value)}
+                                    className="min-h-[80px] resize-none"
+                                />
+                                {errors.care_instructions && <p className="text-xs text-red-500">{errors.care_instructions}</p>}
                             </div>
                         </CardContent>
                         )}
