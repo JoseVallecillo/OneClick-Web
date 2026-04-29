@@ -23,6 +23,8 @@ import {
     X,
     ChevronUp,
     ChevronDown,
+    LayoutGrid,
+    LayoutList,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 
@@ -135,9 +137,24 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     const [categoryFilter, setCategoryFilter] = useState<string>('__all__');
     const [showHistory, setShowHistory]       = useState(false);
     const [scanFeedback, setScanFeedback]     = useState<{ type: 'success' | 'error'; message: string; timestamp: number } | null>(null);
+    const [catalogView, setCatalogView]       = useState<'cards' | 'table'>('cards');
 
     const searchRef = useRef<HTMLInputElement>(null);
     const lastScanTimeRef = useRef<number>(0);
+
+    // Load catalog view preference from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('pos_catalog_view');
+        if (saved === 'table' || saved === 'cards') {
+            setCatalogView(saved);
+        }
+    }, []);
+
+    function toggleCatalogView() {
+        const newView = catalogView === 'cards' ? 'table' : 'cards';
+        setCatalogView(newView);
+        localStorage.setItem('pos_catalog_view', newView);
+    }
 
     // Load cart from localStorage on mount
     useEffect(() => {
@@ -393,6 +410,19 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                         <span className="text-[10px]">Ctrl+K buscar • Ctrl+Enter cobrar • Shift+Del limpiar</span>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
+                            onClick={toggleCatalogView}
+                            title={catalogView === 'cards' ? 'Cambiar a vista tabla' : 'Cambiar a vista tarjetas'}
+                        >
+                            {catalogView === 'cards' ? (
+                                <><LayoutList className="h-3.5 w-3.5" />Tabla</>
+                            ) : (
+                                <><LayoutGrid className="h-3.5 w-3.5" />Tarjetas</>
+                            )}
+                        </Button>
                         <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setShowHistory(!showHistory)}>
                             <History className="h-3.5 w-3.5" />
                             Historial
@@ -446,10 +476,13 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                         </div>
 
                         {/* Catalog area: Category Grid or Product Grid */}
-                        <div className="flex-1 overflow-y-auto p-3">
-                            {!searchQuery.trim() && categoryFilter === '__all__' ? (
-                                /* ── Category Grid ───────────────────────────────── */
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <div className="flex-1 overflow-y-auto">
+                            {catalogView === 'cards' ? (
+                                /* ── CARDS VIEW ────────────────────────────────── */
+                                <div className="p-3">
+                                    {!searchQuery.trim() && categoryFilter === '__all__' ? (
+                                        /* ── Category Grid ───────────────────────────────── */
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                     {categories.map((c, i) => {
                                         const colors = [
                                             'bg-blue-500/10 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
@@ -564,6 +597,105 @@ export default function Sell({ session, products, customers, recentSales }: Prop
                                                     </button>
                                                 );
                                             })}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* ── TABLE VIEW ────────────────────────────────── */
+                                <div className="p-3">
+                                    {!searchQuery.trim() && categoryFilter === '__all__' ? (
+                                        /* ── Category Table ───────────────────────────────── */
+                                        <div className="space-y-2">
+                                            {categories.map((c) => (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={() => setCategoryFilter(String(c.id))}
+                                                    className="w-full text-left p-2.5 rounded border border-border hover:bg-primary/10 hover:border-primary transition-colors flex items-center justify-between group"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        {c.image_path ? (
+                                                            <img src={`/storage/${c.image_path}`} alt={c.name} className="h-8 w-8 rounded object-cover" />
+                                                        ) : (
+                                                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                                                        )}
+                                                        <span className="font-medium text-sm">{c.name}</span>
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded group-hover:bg-primary/20">
+                                                        {products.filter(p => p.category_id === c.id).length}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        /* ── Product Table ───────────────────────────────── */
+                                        <div className="space-y-2">
+                                            {!searchQuery.trim() && categoryFilter !== '__all__' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setCategoryFilter('__all__')}
+                                                    className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                    Volver a categorías
+                                                </Button>
+                                            )}
+
+                                            {filteredProducts.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
+                                                    <Search className="h-6 w-6 mb-2 opacity-30" />
+                                                    No se encontraron productos
+                                                </div>
+                                            ) : (
+                                                <div className="border rounded-lg overflow-hidden">
+                                                    <table className="w-full text-xs">
+                                                        <thead className="bg-muted/50 border-b sticky top-0">
+                                                            <tr>
+                                                                <th className="text-left px-3 py-2 font-semibold">Producto</th>
+                                                                <th className="text-center px-2 py-2 font-semibold w-16">Stock</th>
+                                                                <th className="text-right px-3 py-2 font-semibold w-20">Precio</th>
+                                                                <th className="text-center px-2 py-2 w-10"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {filteredProducts.map((product) => {
+                                                                const stockLow = product.stock !== null && product.stock <= 0;
+                                                                return (
+                                                                    <tr
+                                                                        key={product.id}
+                                                                        className={`border-b hover:bg-muted/50 transition-colors ${stockLow ? 'opacity-50' : 'cursor-pointer'}`}
+                                                                    >
+                                                                        <td className="px-3 py-2">
+                                                                            <div>
+                                                                                <div className="font-medium">{product.name}</div>
+                                                                                <div className="text-[10px] text-muted-foreground font-mono">{product.sku}</div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="text-center px-2 py-2">
+                                                                            <span className={product.stock !== null && product.stock < 5 ? 'text-amber-600 font-bold' : ''}>
+                                                                                {product.stock !== null ? fmtNum(product.stock) : 'N/A'}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="text-right px-3 py-2 font-bold tabular-nums">
+                                                                            {sym} {fmtNum(parseFloat(product.price))}
+                                                                        </td>
+                                                                        <td className="text-center px-2 py-2">
+                                                                            <button
+                                                                                onClick={() => !stockLow && addProduct(product)}
+                                                                                disabled={stockLow}
+                                                                                className={`rounded p-1 transition-colors ${stockLow ? 'text-muted-foreground cursor-not-allowed' : 'text-primary hover:bg-primary/10'}`}
+                                                                                title={stockLow ? 'Sin stock' : 'Agregar'}
+                                                                            >
+                                                                                <Plus className="h-4 w-4" />
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
