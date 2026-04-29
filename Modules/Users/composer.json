@@ -1,0 +1,16 @@
+{
+    "name": "modules/users",
+    "description": "User and Profile Management module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Users\\": "app/",
+            "Modules\\Users\\Database\\Factories\\": "database/factories/",
+            "Modules\\Users\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Users\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Users",
+    "alias": "users",
+    "description": "User and profile management — create users, define permission profiles, and assign individual exceptions without modifying source code.",
+    "keywords": ["users", "profiles", "permissions", "roles"],
+    "priority": 11,
+    "providers": [
+        "Modules\\Users\\Providers\\UsersServiceProvider"
+    ],
+    "files": []
+}

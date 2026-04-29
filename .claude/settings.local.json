@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(composer dump-autoload *)",
+      "Bash(php artisan *)",
+      "Bash(grep \"Modules\\\\\\\\\\\\\\\\\" vendor/composer/autoload_psr4.php)",
+      "Bash(xargs grep *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(grep -i \"Modules\\\\\\\\\\\\\\\\\")",
+      "PowerShell(composer dump-autoload 2>&1)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(tail -5)",
+      "PowerShell(php artisan module:migrate Pos --force 2>&1)",
+      "PowerShell(php artisan module:migrate Barbershop --force 2>&1)",
+      "PowerShell(php artisan wayfinder:generate --with-form 2>&1)",
+      "PowerShell(npm install axios 2>&1)"
+    ]
+  }
+}

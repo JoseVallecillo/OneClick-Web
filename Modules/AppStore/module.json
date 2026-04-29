@@ -1,0 +1,11 @@
+{
+    "name": "AppStore",
+    "alias": "appstore",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AppStore\\Providers\\AppStoreServiceProvider"
+    ],
+    "files": []
+}

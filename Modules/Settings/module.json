@@ -1,0 +1,11 @@
+{
+    "name": "Settings",
+    "alias": "settings",
+    "description": "Global configuration — company identity, branches, operational parameters and SMTP.",
+    "keywords": ["settings", "company", "branches", "configuration"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Settings\\Providers\\SettingsServiceProvider"
+    ],
+    "files": []
+}

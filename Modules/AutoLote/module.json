@@ -1,0 +1,9 @@
+{
+    "name": "AutoLote",
+    "alias": "autolote",
+    "description": "Módulo de gestión de inventario para autolotes — registro de vehículos, ciclo de vida, costos capitalizados, ventas con financiamiento propio y control de cuotas.",
+    "keywords": ["autolote", "vehículos", "inventario", "financiamiento", "carros", "autos"],
+    "priority": 45,
+    "providers": ["Modules\\AutoLote\\Providers\\AutoLoteServiceProvider"],
+    "files": []
+}

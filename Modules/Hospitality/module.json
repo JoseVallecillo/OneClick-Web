@@ -1,0 +1,11 @@
+{
+    "name": "Hospitality",
+    "alias": "hospitality",
+    "description": "Hotel management module — rooms, reservations, folios, and billing with Honduras taxes.",
+    "keywords": ["hospitality", "hotel", "rooms", "reservations", "check-in", "check-out", "folio"],
+    "priority": 50,
+    "providers": [
+        "Modules\\Hospitality\\Providers\\HospitalityServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Microfinance",
+    "alias": "microfinance",
+    "description": "Módulo de microfinanzas: grupos solidarios, ciclos de crédito, gestión de cartera en campo y reportes regulatorios Honduras.",
+    "keywords": [],
+    "priority": 70,
+    "providers": [
+        "Modules\\Microfinance\\app\\Providers\\MicrofinanceServiceProvider"
+    ],
+    "files": []
+}

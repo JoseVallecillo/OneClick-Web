@@ -1,0 +1,11 @@
+{
+    "name": "Accounting",
+    "alias": "accounting",
+    "description": "Módulo contable — catálogo de cuentas, diarios, asientos de partida doble, impuestos ISV y configuración CAI para Honduras (SAR).",
+    "keywords": ["accounting", "contabilidad", "journals", "diarios", "asientos", "cuentas", "impuestos", "cai", "sar", "honduras"],
+    "priority": 50,
+    "providers": [
+        "Modules\\Accounting\\Providers\\AccountingServiceProvider"
+    ],
+    "files": []
+}

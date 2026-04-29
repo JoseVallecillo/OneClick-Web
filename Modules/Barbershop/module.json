@@ -1,0 +1,11 @@
+{
+    "name": "Barbershop",
+    "alias": "barbershop",
+    "description": "Gestión integral de barbería — citas, clientes, barberos, servicios, cola de espera y reportes.",
+    "keywords": ["barbershop", "barberia", "citas", "appointments", "barber", "haircut"],
+    "priority": 35,
+    "providers": [
+        "Modules\\Barbershop\\Providers\\BarbershopServiceProvider"
+    ],
+    "files": []
+}

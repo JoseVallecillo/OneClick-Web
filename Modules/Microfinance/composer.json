@@ -1,0 +1,20 @@
+{
+    "name": "modules/microfinance",
+    "description": "",
+    "authors": [],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Microfinance\\app\\Providers\\MicrofinanceServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Microfinance\\app\\": "app/",
+            "Modules\\Microfinance\\Database\\Seeders\\": "database/seeders/",
+            "Modules\\Microfinance\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "require": {}
+}

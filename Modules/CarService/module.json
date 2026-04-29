@@ -1,0 +1,11 @@
+{
+    "name": "CarService",
+    "alias": "carservice",
+    "description": "Módulo de lubricentro y taller — check-in digital, inspección 360°, receta de servicio con combos y upselling, cálculo automático de próximo cambio y generación de etiqueta QR.",
+    "keywords": ["car service", "lubricentro", "taller", "aceite", "cambio de aceite", "inspección", "vehículos"],
+    "priority": 40,
+    "providers": [
+        "Modules\\CarService\\Providers\\CarServiceServiceProvider"
+    ],
+    "files": []
+}

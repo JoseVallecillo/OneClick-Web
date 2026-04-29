@@ -1,0 +1,16 @@
+{
+    "name": "modules/autolote",
+    "description": "AutoLote module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\AutoLote\\": "app/",
+            "Modules\\AutoLote\\Database\\Factories\\": "database/factories/",
+            "Modules\\AutoLote\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AutoLote\\Tests\\": "tests/"
+        }
+    }
+}

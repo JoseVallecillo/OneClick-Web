@@ -1,0 +1,16 @@
+{
+    "name": "modules/barbershop",
+    "description": "Barbershop module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Barbershop\\": "app/",
+            "Modules\\Barbershop\\Database\\Factories\\": "database/factories/",
+            "Modules\\Barbershop\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Barbershop\\Tests\\": "tests/"
+        }
+    }
+}

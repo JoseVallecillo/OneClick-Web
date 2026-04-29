@@ -1,0 +1,16 @@
+{
+    "name": "modules/rentals",
+    "description": "Rentals module for OneClick",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Rentals\\": "app/",
+            "Modules\\Rentals\\Database\\Factories\\": "database/factories/",
+            "Modules\\Rentals\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Rentals\\Tests\\": "tests/"
+        }
+    }
+}
