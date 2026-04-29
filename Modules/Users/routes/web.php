@@ -19,4 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('users/profiles', [UsersController::class, 'storeProfile'])->name('users.profiles.store');
     Route::patch('users/profiles/{profile}', [UsersController::class, 'updateProfile'])->name('users.profiles.update');
     Route::delete('users/profiles/{profile}', [UsersController::class, 'deleteProfile'])->name('users.profiles.delete');
+
+    // ── User preferences ───────────────────────────────────────────────────────
+    Route::post('api/users/{user}/pos-preference', [UsersController::class, 'updatePosCatalogPreference'])->name('users.pos-preference');
 });

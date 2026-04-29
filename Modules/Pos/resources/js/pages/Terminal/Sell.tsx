@@ -109,8 +109,10 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactN
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function Sell({ session, products, customers, recentSales }: Props) {
-    const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
+    const { props } = usePage<{ flash?: { success?: string; error?: string }; auth?: { user?: { id: number; pos_catalog_view: 'cards' | 'table' } } }>();
     const flash = props.flash;
+    const auth = props.auth;
+    const user = auth?.user;
     const sym = session.currency.symbol;
 
     const [flashVisible, setFlashVisible] = useState(!!flash?.success);
@@ -142,18 +144,26 @@ export default function Sell({ session, products, customers, recentSales }: Prop
     const searchRef = useRef<HTMLInputElement>(null);
     const lastScanTimeRef = useRef<number>(0);
 
-    // Load catalog view preference from localStorage
+    // Load catalog view preference from user or localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('pos_catalog_view');
-        if (saved === 'table' || saved === 'cards') {
-            setCatalogView(saved);
+        if (user?.pos_catalog_view) {
+            setCatalogView(user.pos_catalog_view);
+        } else {
+            const saved = localStorage.getItem('pos_catalog_view');
+            if (saved === 'table' || saved === 'cards') {
+                setCatalogView(saved);
+            }
         }
-    }, []);
+    }, [user?.pos_catalog_view]);
 
     function toggleCatalogView() {
         const newView = catalogView === 'cards' ? 'table' : 'cards';
         setCatalogView(newView);
         localStorage.setItem('pos_catalog_view', newView);
+
+        if (user?.id) {
+            router.post(`/api/users/${user.id}/pos-preference`, { pos_catalog_view: newView });
+        }
     }
 
     // Load cart from localStorage on mount

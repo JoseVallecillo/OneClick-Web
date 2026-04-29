@@ -234,4 +234,19 @@ class UsersController extends Controller
         return back()->with('success', 'Perfil eliminado. Los usuarios asignados quedaron sin perfil.');
     }
 
+    public function updatePosCatalogPreference(Request $request, User $user)
+    {
+        if ($request->user()->id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'pos_catalog_view' => 'required|in:cards,table',
+        ]);
+
+        $user->update(['pos_catalog_view' => $validated['pos_catalog_view']]);
+
+        return response()->json(['success' => true]);
+    }
+
 }
